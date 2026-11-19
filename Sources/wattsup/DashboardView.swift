@@ -65,13 +65,13 @@ struct DashboardView: View {
                         .frame(width: 360)
                     }
                     .fixedSize(horizontal: false, vertical: true)
-                    charts
                     HStack(alignment: .top, spacing: 16) {
                         ChargerCard(snapshot: s, assessment: monitor.assessment, quality: monitor.quality)
                         BatteryCard(snapshot: s, trend: HealthTrend(points: monitor.healthPoints))
                         if let t = s.thermals { ThermalsCard(thermals: t, batteryC: s.temperatureC) }
                     }
                     .fixedSize(horizontal: false, vertical: true)
+                    charts
                     HStack(alignment: .top, spacing: 16) {
                         EnergyCard(days: EnergyAccount.daily(monitor.archive), price: settings.pricePerKWh)
                         EnergyByAppCard(impact: monitor.impact)
