@@ -148,3 +148,17 @@ public enum HistoryArchive {
         return names.filter { $0.hasSuffix(".jsonl") && $0 < cutoff }
     }
 }
+
+public enum ChartGaps {
+    /// A segment number per point that changes wherever readings stop for longer than `maxGap`,
+    /// so a chart breaks its line across time Wattsup was not running instead of inventing a curve.
+    public static func segments(_ dates: [Date], maxGap: TimeInterval = 300) -> [Int] {
+        var out: [Int] = []
+        var segment = 0
+        for (i, d) in dates.enumerated() {
+            if i > 0, d.timeIntervalSince(dates[i - 1]) > maxGap { segment += 1 }
+            out.append(segment)
+        }
+        return out
+    }
+}

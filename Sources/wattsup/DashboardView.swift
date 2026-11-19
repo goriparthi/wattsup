@@ -367,6 +367,8 @@ struct ChargerHistoryCard: View {
     let chargers: [ChargerRecord]
     let current: String?
     let forget: (String) -> Void
+    /// Off for images, where a button cannot be drawn
+    var showsForget = true
 
     var body: some View {
         Card(title: "Chargers you've used", symbol: "suitcase.rolling") {
@@ -376,7 +378,7 @@ struct ChargerHistoryCard: View {
             } else {
                 Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 8) {
                     GridRow {
-                        Text("Charger"); Text("Limit"); Text("Peak load"); Text("Quality"); Text("Efficiency"); Text("Mac wanted"); Text("Used"); Text("Last seen"); Text("Verdict"); Text("")
+                        Text("Charger"); Text("Limit"); Text("Peak load"); Text("Quality"); Text("Efficiency"); Text("Mac wanted"); Text("Used"); Text("Last seen"); Text("Verdict"); if showsForget { Text("") }
                     }
                     .font(Theme.Style(large: true).caption)
                     .foregroundStyle(Theme.Style(large: true).secondary)
@@ -406,14 +408,16 @@ struct ChargerHistoryCard: View {
                             Text(Units.duration(minutes: Int(r.secondsConnected / 60)))
                             Text(r.lastSeen, format: .relative(presentation: .named))
                             Text(r.lastVerdict ?? "Not judged yet").foregroundStyle(Theme.Style(large: true).secondary)
-                            Button {
-                                forget(r.fingerprint)
-                            } label: {
-                                Image(systemName: "trash")
+                            if showsForget {
+                                Button {
+                                    forget(r.fingerprint)
+                                } label: {
+                                    Image(systemName: "trash")
+                                }
+                                .buttonStyle(.borderless)
+                                .help("Forget this charger")
+                                .accessibilityLabel("Forget \(r.title)")
                             }
-                            .buttonStyle(.borderless)
-                            .help("Forget this charger")
-                            .accessibilityLabel("Forget \(r.title)")
                         }
                         .font(.callout.monospacedDigit())
                     }

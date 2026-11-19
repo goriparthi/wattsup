@@ -101,12 +101,9 @@ enum DashboardRender {
 /// frames at exact time steps, from live data, for a seamless looping video on the site.
 @MainActor
 enum FlowFramesRender {
-    static func run(directory: String, seconds: Double, fps: Double) -> Int32 {
-        let monitor = PowerMonitor()
+    static func run(directory: String, seconds: Double, fps: Double, warmup: Double = 3) -> Int32 {
+        let monitor = MarketingCapture.warmedMonitor(seconds: warmup)
         let settings = AppSettings()
-        monitor.refresh()
-        RunLoop.main.run(until: Date().addingTimeInterval(3))
-        monitor.refresh()
         let dir = URL(fileURLWithPath: directory, isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let count = Int(seconds * fps)
@@ -125,5 +122,71 @@ enum FlowFramesRender {
         }
         print("Rendered \(count) frames to \(directory)")
         return 0
+    }
+}
+
+/// Shared setup for the site renders: a monitor polled like the app for `seconds`, so the charger
+/// verdict, report card and energy ranking have settled before anything is drawn.
+@MainActor
+enum MarketingCapture {
+    static func warmedMonitor(seconds: Double) -> PowerMonitor {
+        let monitor = PowerMonitor()
+        monitor.impact.viewerAppeared()
+        let end = Date().addingTimeInterval(seconds)
+        repeat {
+            monitor.refresh()
+            RunLoop.main.run(until: Date().addingTimeInterval(2))
+        } while Date() < end
+        monitor.refresh()
+        return monitor
+    }
+
+    static func write<V: View>(_ view: V, width: CGFloat, to url: URL) -> Bool {
+        let renderer = ImageRenderer(content: view
+            .frame(width: width)
+            .environment(\.colorScheme, .dark)
+            .environment(\.themeStyle, Theme.Style(large: true))
+            .padding(1)
+            .background(Theme.canvas))
+        renderer.scale = 2
+        guard let cg = renderer.cgImage,
+              let png = NSBitmapImageRep(cgImage: cg).representation(using: .png, properties: [:]) else { return false }
+        return (try? png.write(to: url)) != nil
+    }
+}
+
+/// `wattsup --render-cards <dir> [warmup seconds]`: each dashboard card as its own image, for the site.
+@MainActor
+enum CardsRender {
+    static func run(directory: String, warmup: Double) -> Int32 {
+        let m = MarketingCapture.warmedMonitor(seconds: warmup)
+        guard let s = m.snapshot else { return 1 }
+        let dir = URL(fileURLWithPath: directory, isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let day = m.archive.filter { $0.date >= Date().addingTimeInterval(-86400) }.thinned(to: 400)
+        var ok = true
+        ok = MarketingCapture.write(ChargerCard(snapshot: s, assessment: m.assessment, quality: m.quality), width: 520,
+                                    to: dir.appendingPathComponent("card-charger.png")) && ok
+        ok = MarketingCapture.write(BatteryCard(snapshot: s, trend: HealthTrend(points: m.healthPoints)), width: 520,
+                                    to: dir.appendingPathComponent("card-battery.png")) && ok
+        if let t = s.thermals {
+            ok = MarketingCapture.write(ThermalsCard(thermals: t, batteryC: s.temperatureC), width: 520,
+                                        to: dir.appendingPathComponent("card-thermals.png")) && ok
+        }
+        ok = MarketingCapture.write(EnergyCard(days: EnergyAccount.daily(m.archive), price: 0), width: 520,
+                                    to: dir.appendingPathComponent("card-energy.png")) && ok
+        ok = MarketingCapture.write(EnergyByAppCard(impact: m.impact), width: 620,
+                                    to: dir.appendingPathComponent("card-apps.png")) && ok
+        ok = MarketingCapture.write(ChargerHistoryCard(chargers: m.chargers.sorted, current: s.adapter?.fingerprint, forget: { _ in }, showsForget: false),
+                                    width: 1040, to: dir.appendingPathComponent("card-chargers.png")) && ok
+        ok = MarketingCapture.write(Card(title: "History, last 24 hours", symbol: "chart.xyaxis.line") {
+            SeriesChart(series: Series.power(day), unit: "W", height: 220, showsZero: true, strideMinutes: 180)
+        }, width: 1040, to: dir.appendingPathComponent("card-history.png")) && ok
+        if let a = m.assessment {
+            ok = MarketingCapture.write(Card(title: "Charger check", symbol: "checkmark.shield") { VerdictBanner(assessment: a) },
+                                        width: 520, to: dir.appendingPathComponent("card-check.png")) && ok
+        }
+        print("Rendered cards to \(directory)" + (ok ? "" : " with errors"))
+        return ok ? 0 : 1
     }
 }

@@ -37,3 +37,11 @@ final class HistoryArchiveTests: XCTestCase {
         XCTAssertEqual(HistoryArchive.expired(names, now: now, days: 30), ["1970-01-01.jsonl"])
     }
 }
+
+final class ChartGapTests: XCTestCase {
+    func testBreaksOnlyAcrossLongGaps() {
+        let t = [0, 60, 120, 4000, 4060, 4120, 20000].map { Date(timeIntervalSince1970: Double($0)) }
+        XCTAssertEqual(ChartGaps.segments(t), [0, 0, 0, 1, 1, 1, 2])
+        XCTAssertEqual(ChartGaps.segments([]), [])
+    }
+}

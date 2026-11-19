@@ -194,9 +194,11 @@ struct SeriesChart: View {
     var body: some View {
         Chart {
             ForEach(series) { s in
-                ForEach(Array(s.points.enumerated()), id: \.offset) { _, p in
+                // Each unbroken run of readings is its own line, so gaps stay visibly empty
+                let segments = ChartGaps.segments(s.points.map(\.date))
+                ForEach(Array(s.points.enumerated()), id: \.offset) { i, p in
                     LineMark(x: .value("Time", p.date), y: .value(unit, p.value),
-                             series: .value("Series", s.name))
+                             series: .value("Segment", "\(s.name) \(segments[i])"))
                         .foregroundStyle(by: .value("Series", s.name))
                         .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, dash: s.dash))
                         .interpolationMethod(.monotone)

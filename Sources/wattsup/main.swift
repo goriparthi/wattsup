@@ -28,7 +28,12 @@ case "--render-flow-frames":
     let dir = args.first ?? "dist/flow-frames"
     let seconds = args.count > 1 ? Double(args[1]) ?? 4 : 4
     let fps = args.count > 2 ? Double(args[2]) ?? 30 : 30
-    exit(MainActor.assumeIsolated { FlowFramesRender.run(directory: dir, seconds: seconds, fps: fps) })
+    let warmup = args.count > 3 ? Double(args[3]) ?? 3 : 3
+    exit(MainActor.assumeIsolated { FlowFramesRender.run(directory: dir, seconds: seconds, fps: fps, warmup: warmup) })
+case "--render-cards":
+    let args = Array(CommandLine.arguments.dropFirst(2))
+    let warmup = args.count > 1 ? Double(args[1]) ?? 60 : 60
+    exit(MainActor.assumeIsolated { CardsRender.run(directory: args.first ?? "dist/cards", warmup: warmup) })
 case "--render-dashboard":
     let file = CommandLine.arguments.dropFirst(2).first ?? "dist/dashboard.png"
     exit(MainActor.assumeIsolated { DashboardRender.run(file: file) })
