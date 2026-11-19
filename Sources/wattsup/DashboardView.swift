@@ -41,7 +41,7 @@ struct DashboardView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     charts
                     HStack(alignment: .top, spacing: 16) {
-                        ChargerCard(snapshot: s, assessment: monitor.assessment)
+                        ChargerCard(snapshot: s, assessment: monitor.assessment, quality: monitor.quality)
                         BatteryCard(snapshot: s)
                     }
                     .fixedSize(horizontal: false, vertical: true)
@@ -168,6 +168,7 @@ struct HeroStat: View {
 struct ChargerCard: View {
     let snapshot: PowerSnapshot
     let assessment: ChargerAssessment?
+    let quality: ChargerQuality?
 
     var body: some View {
         Card(title: "Charger", symbol: "powerplug.fill") {
@@ -191,6 +192,10 @@ struct ChargerCard: View {
                 }
                 Divider()
                 EfficiencyRating(snapshot: snapshot)
+                if let quality {
+                    Divider()
+                    ReportCard(quality: quality)
+                }
                 if a.isWireless { StatRow(label: "Type", value: "Wireless") }
                 if !a.profiles.isEmpty {
                     Divider()
@@ -264,7 +269,7 @@ struct ChargerHistoryCard: View {
             } else {
                 Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 8) {
                     GridRow {
-                        Text("Charger"); Text("Limit"); Text("Peak load"); Text("Efficiency"); Text("Mac wanted"); Text("Used"); Text("Last seen"); Text("Verdict"); Text("")
+                        Text("Charger"); Text("Limit"); Text("Peak load"); Text("Quality"); Text("Efficiency"); Text("Mac wanted"); Text("Used"); Text("Last seen"); Text("Verdict"); Text("")
                     }
                     .font(.caption)
                     .foregroundStyle(Theme.secondaryText)
@@ -278,6 +283,12 @@ struct ChargerHistoryCard: View {
                             }
                             Text(Units.watts(r.ceilingWatts, digits: 0))
                             Text(Units.percent(r.peakLoad)).foregroundStyle(Theme.load(r.peakLoad ?? 0))
+                            if let g = r.quality {
+                                Text(g.title + (r.resistanceOhms.map { String(format: ", %.2f Ω", $0) } ?? ""))
+                                    .foregroundStyle(Color(Brand.color(g.tone)))
+                            } else {
+                                Text("Not graded").foregroundStyle(Theme.secondaryText)
+                            }
                             if let e = r.averageEfficiency {
                                 let grade = ChargerEfficiency.Grade.of(e)
                                 Text("\(Units.percent(e)) \(grade.title)").foregroundStyle(Color(Brand.color(grade.tone)))
@@ -376,5 +387,49 @@ struct EfficiencyRating: View {
                     .foregroundStyle(Theme.secondaryText)
             }
         }
+    }
+}
+
+/// The charger and cable report card: one row per check, ungraded until measured.
+struct ReportCard: View {
+    let quality: ChargerQuality
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Report card").font(.callout.weight(.semibold))
+                Spacer()
+                if let g = quality.overall { GradePill(grade: g) }
+            }
+            ForEach(quality.checks) { check in
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack {
+                        Text(check.name).foregroundStyle(Theme.secondaryText)
+                        Spacer()
+                        Text(check.value).monospacedDigit()
+                            .foregroundStyle(check.grade.map { Color(Brand.color($0.tone)) } ?? Theme.secondaryText)
+                    }
+                    .font(.callout)
+                    Text(check.detail).font(.caption).foregroundStyle(Theme.secondaryText)
+                }
+            }
+            Text("The overall grade is the weakest check. Cable resistance comes from how voltage falls as current rises, so it separates the cable from the charger.")
+                .font(.caption)
+                .foregroundStyle(Theme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+struct GradePill: View {
+    let grade: ChargerQuality.Grade
+
+    var body: some View {
+        let tint = Color(Brand.color(grade.tone))
+        Text(grade.title)
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 8).padding(.vertical, 2)
+            .background(Capsule().fill(tint.opacity(0.15)))
+            .foregroundStyle(tint)
     }
 }

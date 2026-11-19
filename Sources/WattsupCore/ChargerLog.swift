@@ -16,6 +16,13 @@ public struct ChargerRecord: Codable, Equatable, Identifiable, Sendable {
     /// Running efficiency average over rated readings; optional so older logs still decode.
     public var efficiencyTotal: Double?
     public var efficiencyCount: Int?
+    /// Report card results; optional so older logs still decode.
+    public var dropouts: Int?
+    public var qualityGrade: Int?
+    public var resistanceOhms: Double?
+    public var sagFraction: Double?
+
+    public var quality: ChargerQuality.Grade? { qualityGrade.flatMap(ChargerQuality.Grade.init(rawValue:)) }
     public var id: String { fingerprint }
 
     public var averageEfficiency: Double? {
@@ -69,6 +76,22 @@ public struct ChargerLog: Codable, Equatable, Sendable {
             r.efficiencyCount = (r.efficiencyCount ?? 0) + 1
         }
         records[i] = r
+    }
+
+    public mutating func noteDropout(_ fingerprint: String) {
+        guard let i = records.firstIndex(where: { $0.fingerprint == fingerprint }) else { return }
+        records[i].dropouts = (records[i].dropouts ?? 0) + 1
+    }
+
+    public func dropouts(_ fingerprint: String) -> Int {
+        records.first { $0.fingerprint == fingerprint }?.dropouts ?? 0
+    }
+
+    public mutating func store(_ q: ChargerQuality, for fingerprint: String) {
+        guard let i = records.firstIndex(where: { $0.fingerprint == fingerprint }) else { return }
+        records[i].qualityGrade = q.overall?.rawValue
+        if let r = q.resistanceOhms { records[i].resistanceOhms = r }
+        if let s = q.sagFraction { records[i].sagFraction = s }
     }
 
     public mutating func forget(_ fingerprint: String) {

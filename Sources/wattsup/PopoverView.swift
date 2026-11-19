@@ -58,6 +58,10 @@ struct PopoverView: View {
                     if let e = ChargerEfficiency(snapshot: s) {
                         StatRow(label: "Efficiency", value: e.summary, tint: Color(Brand.color(e.grade.tone)))
                     }
+                    if let q = monitor.quality, let g = q.overall {
+                        StatRow(label: "Quality", value: g.title + (q.resistanceOhms.map { String(format: ", cable %.2f Ω", $0) } ?? ""),
+                                tint: Color(Brand.color(g.tone)))
+                    }
                     if let load = s.chargerLoad {
                         StatRow(label: "Load", value: "\(Units.percent(load)) of \(Units.watts(adapter.ceilingWatts, digits: 0))",
                                 tint: Theme.load(load))

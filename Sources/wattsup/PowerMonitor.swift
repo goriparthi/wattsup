@@ -15,6 +15,7 @@ final class PowerMonitor {
     private(set) var history = PowerHistory()
     private(set) var assessment: ChargerAssessment?
     private(set) var chargers: ChargerLog
+    private(set) var quality: ChargerQuality?
 
     @ObservationIgnored var onUpdate: (() -> Void)?
     let energy = EnergyModeController()
@@ -23,6 +24,8 @@ final class PowerMonitor {
     @ObservationIgnored private var lastSave = Date.distantPast
     @ObservationIgnored private var lastFingerprint: String?
     @ObservationIgnored private var peripherals: [Peripheral] = []
+    @ObservationIgnored private var lastDisconnect: (fingerprint: String, at: Date)?
+    @ObservationIgnored private var ticksSinceQuality = 0
     private static let peripheralScanEvery = 3
     /// Starts due, so the first reading already includes attached devices
     @ObservationIgnored private var ticksSincePeripheralScan = PowerMonitor.peripheralScanEvery
@@ -69,6 +72,8 @@ final class PowerMonitor {
             let a = ChargerAssessment(snapshot: s, history: history, known: chargers.records)
             let settled = a.verdict != .measuring && a.verdict != .unplugged
             chargers.record(s, verdict: settled ? a.headline : nil)
+            trackDropouts(from: snapshot, to: s)
+            updateQuality(s)
             logTransitions(from: snapshot, to: s, verdict: a)
             snapshot = s
             assessment = a
@@ -77,6 +82,36 @@ final class PowerMonitor {
             lastFingerprint = s.adapter?.fingerprint
         }
         onUpdate?()
+    }
+
+    /// A replug of the same charger within 10 s counts as a drop-out against it.
+    private func trackDropouts(from old: PowerSnapshot?, to s: PowerSnapshot) {
+        if let fp = old?.adapter?.fingerprint, old?.isExternalPower == true, !s.isExternalPower {
+            lastDisconnect = (fp, s.date)
+        }
+        if let d = lastDisconnect, let fp = s.adapter?.fingerprint, s.isExternalPower {
+            if fp == d.fingerprint && s.date.timeIntervalSince(d.at) <= 10 {
+                chargers.noteDropout(fp)
+                log.warning("Charger dropped out and reconnected within \(Int(s.date.timeIntervalSince(d.at))) s")
+            }
+            lastDisconnect = nil
+        }
+    }
+
+    /// The report card scans the whole history, so it runs every fifth tick.
+    private func updateQuality(_ s: PowerSnapshot) {
+        guard let adapter = s.adapter, s.isExternalPower else { quality = nil; return }
+        ticksSinceQuality += 1
+        guard quality == nil || ticksSinceQuality >= 5 else { return }
+        ticksSinceQuality = 0
+        let q = ChargerQuality(adapter: adapter, samples: history.samples,
+                               dropouts: chargers.dropouts(adapter.fingerprint),
+                               thermallyLimitedSeconds: s.thermallyLimitedSeconds)
+        if q.overall != quality?.overall, let grade = q.overall {
+            log.info("Charger report card: \(grade.title)" + (q.resistanceOhms.map { String(format: ", cable %.2f ohm", $0) } ?? ""))
+        }
+        quality = q
+        chargers.store(q, for: adapter.fingerprint)
     }
 
     /// Logs only what changed, so the file reads as a timeline of plug events and verdicts.
