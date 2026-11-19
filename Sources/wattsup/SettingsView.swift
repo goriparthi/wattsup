@@ -43,6 +43,19 @@ struct SettingsView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             }
+            Section {
+                HStack {
+                    Text("macOS battery icon")
+                    Spacer()
+                    Button("Open Menu Bar Settings…", action: SystemSettings.openMenuBar)
+                }
+            } header: {
+                Text("Menu bar space")
+            } footer: {
+                Text("Wattsup can show battery percent and time, so the built in battery icon is optional. Turn off Battery in that list, or Command drag the icon out of the menu bar.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             Section("General") {
                 Toggle("Open at login", isOn: Binding(get: { settings.launchesAtLogin },
                                                       set: { settings.setLaunchesAtLogin($0) }))

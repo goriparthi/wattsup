@@ -357,3 +357,42 @@ struct LoadBarTinted: View {
         .frame(height: 6)
     }
 }
+
+/// Energy Mode for one power source. Compact is a single menu row for the popover.
+struct EnergyModePicker: View {
+    let energy: EnergyModeController
+    let source: PowerSource
+    let compact: Bool
+
+    var body: some View {
+        if let modes = energy.modes, let current = modes.mode(for: source) {
+            let binding = Binding(get: { current }, set: { energy.set($0, for: source) })
+            if compact {
+                HStack {
+                    Text("Energy mode").foregroundStyle(.secondary)
+                    Spacer()
+                    Picker("Energy mode", selection: binding) {
+                        ForEach(modes.available) { Text($0.title).tag($0) }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                    .disabled(energy.busy)
+                }
+                .font(.callout)
+            } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(source.title).font(.caption).foregroundStyle(.secondary)
+                    Picker(source.title, selection: binding) {
+                        ForEach(modes.available) { Text($0.title).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .disabled(energy.busy)
+                    if let error = energy.error {
+                        Text(error).font(.caption).foregroundStyle(Theme.warning)
+                    }
+                }
+            }
+        }
+    }
+}

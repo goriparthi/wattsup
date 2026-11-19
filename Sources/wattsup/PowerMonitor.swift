@@ -17,6 +17,7 @@ final class PowerMonitor {
     private(set) var chargers: ChargerLog
 
     @ObservationIgnored var onUpdate: (() -> Void)?
+    let energy = EnergyModeController()
     @ObservationIgnored private let store = ChargerStore()
     @ObservationIgnored private var timer: Timer?
     @ObservationIgnored private var lastSave = Date.distantPast
@@ -27,6 +28,7 @@ final class PowerMonitor {
     }
 
     func start(interval: TimeInterval = 2) {
+        energy.start()
         refresh()
         let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.refresh() }
@@ -46,11 +48,12 @@ final class PowerMonitor {
             availability = .readFailed(message)
             snapshot = nil
         case .properties(let props):
-            guard let s = PowerSnapshot(registry: props) else {
+            guard var s = PowerSnapshot(registry: props) else {
                 availability = .readFailed("The battery controller returned no charge reading.")
                 log.error("AppleSmartBattery had no CurrentCapacity")
                 break
             }
+            s.energyMode = energy.effective(onCharger: s.isExternalPower)
             history.append(s)
             let a = ChargerAssessment(snapshot: s, history: history)
             let settled = a.verdict != .measuring && a.verdict != .unplugged

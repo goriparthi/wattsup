@@ -104,8 +104,17 @@ public struct PowerSnapshot: Equatable, Sendable {
     public var notChargingReason: Int
     public var slowChargingReason: Int
     public var thermallyLimitedSeconds: Int?
+    /// Energy Mode for the current power source; filled in by the app, not the registry.
+    public var energyMode: EnergyMode? = nil
 
-    public var batteryWatts: Double { batteryVolts * batteryAmps }
+    /// On battery the pack is the only source, yet for a few seconds after unplugging the
+    /// current still reads as charging. Such a reading is stale, not real.
+    public var batteryReadingIsStale: Bool { !isExternalPower && batteryAmps > 0 }
+
+    public var batteryWatts: Double {
+        if batteryReadingIsStale { return -(systemLoadWatts ?? 0) }
+        return batteryVolts * batteryAmps
+    }
 
     /// Power the Mac itself uses. On battery the pack is the only source, so its own reading
     /// keeps both legs of the flow equal; the controller's load figure is a smoothed average.
@@ -152,7 +161,10 @@ public struct PowerSnapshot: Equatable, Sendable {
 
     /// The bus the menu bar's volts and amps describe: charger input when plugged in.
     public var busVolts: Double { isExternalPower ? (inputVolts ?? batteryVolts) : batteryVolts }
-    public var busAmps: Double { isExternalPower ? (inputAmps ?? batteryAmps) : abs(batteryAmps) }
+    public var busAmps: Double {
+        if isExternalPower { return inputAmps ?? batteryAmps }
+        return batteryVolts > 0 ? abs(batteryWatts) / batteryVolts : abs(batteryAmps)
+    }
     public var headlineWatts: Double { isExternalPower ? (inputWatts ?? 0) : systemWatts }
 
     public var statusLine: String {

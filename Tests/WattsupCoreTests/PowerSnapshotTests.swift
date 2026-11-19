@@ -47,6 +47,16 @@ final class PowerSnapshotTests: XCTestCase {
         XCTAssertEqual(s.busAmps, 1.5, accuracy: 0.0001)
     }
 
+    func testStaleChargingCurrentRightAfterUnplugging() {
+        // The plug flag flips first; the current still reads +2.124 A for a few seconds
+        let s = Fixture.snapshot(Fixture.discharging(amps: 2124))
+        XCTAssertTrue(s.batteryReadingIsStale)
+        XCTAssertEqual(s.batteryWatts, -18.6, accuracy: 0.001)
+        XCTAssertEqual(s.systemWatts, 18.6, accuracy: 0.001, "never 0 W on battery")
+        XCTAssertEqual(s.busAmps, 18.6 / 12.4, accuracy: 0.001)
+        XCTAssertEqual(MenuBarMetric.batteryWatts.tone(for: s), .draining)
+    }
+
     func testEstimatingTimeIsNil() {
         var d = Fixture.charging()
         d["AvgTimeToFull"] = 65535
@@ -77,7 +87,10 @@ final class PowerSnapshotTests: XCTestCase {
 
     func testMenuBarLine() {
         let s = Fixture.snapshot(Fixture.charging())
-        XCTAssertEqual(MenuBarMetric.line(MenuBarMetric.defaults, for: s), "43.0W 19.63V 2.19A")
+        XCTAssertEqual(MenuBarMetric.line(MenuBarMetric.defaults, for: s), "44.2W 15.9W 96% 89%")
+        XCTAssertEqual(MenuBarMetric.line([.watts, .volts, .amps], for: s), "43.0W 19.63V 2.19A")
+        let battery = Fixture.snapshot(Fixture.discharging())
+        XCTAssertEqual(MenuBarMetric.line(MenuBarMetric.defaults, for: battery), "18.6W 89%")
         XCTAssertEqual(MenuBarMetric.line([.percent, .time, .chargerLoad], for: s), "89% 0:47 96%")
         XCTAssertEqual(MenuBarMetric.decode("watts,bogus,amps"), [.watts, .amps])
     }

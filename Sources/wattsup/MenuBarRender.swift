@@ -14,7 +14,7 @@ enum MenuBarRender {
         let url = URL(fileURLWithPath: directory, isDirectory: true)
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         let cases: [(String, [MenuBarMetric], MenuBarLayout, MenuBarIcon, Bool)] = [
-            ("line", [.watts, .volts, .amps], .line, .power, true),
+            ("line", MenuBarMetric.defaults, .line, .power, true),
             ("line-battery-icon", [.watts, .volts, .amps], .line, .battery, true),
             ("stacked", [.watts, .volts, .amps, .percent, .systemWatts, .temperature], .stacked, .power, true),
             ("plain", [.watts, .percent], .line, .power, false),

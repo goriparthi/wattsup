@@ -27,6 +27,15 @@ struct DashboardView: View {
                         ChargerCard(snapshot: s, assessment: monitor.assessment)
                         BatteryCard(snapshot: s)
                     }
+                    Card(title: "Energy mode", symbol: "leaf") {
+                        HStack(alignment: .top, spacing: 24) {
+                            EnergyModePicker(energy: monitor.energy, source: .battery, compact: false)
+                            EnergyModePicker(energy: monitor.energy, source: .charger, compact: false)
+                        }
+                        Text("Changing it asks for an administrator password, because macOS only lets an admin change power settings.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                     ChargerHistoryCard(chargers: monitor.chargers.sorted,
                                        current: s.adapter?.fingerprint,
                                        forget: monitor.forgetCharger)

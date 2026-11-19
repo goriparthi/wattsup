@@ -57,6 +57,7 @@ struct PopoverView: View {
             }
             StatRow(label: "Health", value: Units.percent(s.health, digits: 1))
             StatRow(label: "Temperature", value: Units.celsius(s.temperatureC))
+            EnergyModePicker(energy: monitor.energy, source: s.isExternalPower ? .charger : .battery, compact: true)
         }
     }
 
@@ -87,11 +88,7 @@ struct SettingsMenu: View {
             Button("Settings…", action: actions.openSettings)
                 .keyboardShortcut(",")
             Button("Check for Updates…", action: actions.checkForUpdates)
-            Button("Battery Settings…") {
-                if let url = URL(string: "x-apple.systempreferences:com.apple.Battery-Settings.extension") {
-                    NSWorkspace.shared.open(url)
-                }
-            }
+            Button("Battery Settings…", action: SystemSettings.openBattery)
             Divider()
             Button("Quit Wattsup") { NSApp.terminate(nil) }
                 .keyboardShortcut("q")
