@@ -135,6 +135,8 @@ figcaption{margin-top:14px;font-size:14px;color:var(--muted);line-height:1.5}
 .popover-fig{justify-self:center;width:min(100%,380px)}
 .popover-fig .shot{border-radius:22px}
 .hero-shot .shot{border-radius:16px}
+.hero-shot video.shot{width:100%;height:auto;display:block;background:#1C2138}
+.dash-still{margin:32px 0 40px}
 
 /* Charger check */
 .verdicts{margin-top:28px;display:grid;gap:0;border-top:1px solid var(--line)}
@@ -267,8 +269,14 @@ figcaption{margin-top:14px;font-size:14px;color:var(--muted);line-height:1.5}
         <p class="note">Free and open source. macOS 14 or later on Apple silicon MacBooks. Notarized by Apple.</p>
       </div>
       <figure class="hero-shot">
-        <img class="shot" src="images/dashboard-crop.jpg" width="2000" height="1637" fetchpriority="high"
-             alt="The Wattsup dashboard: a fully charged battery, charger input of 19.8 W at 20 V, a power flow diagram from charger to Mac to battery with a MagSafe charging case branching off the Mac, a charger check reporting headroom on a 70 W charger, energy mode controls, and a history chart.">
+        <!-- Rendered frame by frame from the real app's components and live data, looped seamlessly -->
+        <video class="shot" autoplay muted loop playsinline preload="auto" width="1600" height="640"
+               poster="images/flow-poster.jpg"
+               aria-label="Wattsup dashboard, animated: power flowing from the battery to the Mac at 17.3 W, with the battery at 94% and the charger unplugged.">
+          <source src="images/flow.webm" type="video/webm">
+          <source src="images/flow.mp4" type="video/mp4">
+          <img src="images/flow-poster.jpg" width="1600" height="640" alt="Wattsup dashboard with power flowing from the battery to the Mac.">
+        </video>
       </figure>
     </div>
 
@@ -373,6 +381,10 @@ figcaption{margin-top:14px;font-size:14px;color:var(--muted);line-height:1.5}
       <div class="section-head">
         <h2 id="more-title">Built for people who want the real numbers</h2>
         <p>The dashboard puts everything in one window, far beyond what the system battery settings show.</p>
+      <figure class="hero-shot dash-still">
+        <img class="shot" src="images/dashboard-crop.jpg" width="2000" height="1637" loading="lazy"
+             alt="The Wattsup dashboard: a fully charged battery, charger input of 19.8 W at 20 V, a power flow diagram from charger to Mac to battery with a MagSafe charging case branching off the Mac, a charger check reporting headroom on a 70 W charger, energy mode controls, and a history chart.">
+      </figure>
       </div>
       <ul class="grid">
         <li>
@@ -537,5 +549,11 @@ figcaption{margin-top:14px;font-size:14px;color:var(--muted);line-height:1.5}
     </nav>
   </div>
 </footer>
+<script>
+  // Respect Reduce Motion: show the still poster instead of the looping video
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.querySelectorAll('video[autoplay]').forEach(function (v) { v.removeAttribute('autoplay'); v.pause(); });
+  }
+</script>
 </body>
 </html>

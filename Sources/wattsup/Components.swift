@@ -335,12 +335,13 @@ struct SpinningFan: View {
     var size: CGFloat = 26
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var clock = AnimationClock()
+    @Environment(\.demoFrame) private var demoFrame
 
     var body: some View {
         let running = rpm > 50
         TimelineView(.animation(minimumInterval: 1 / 60, paused: !running || reduceMotion)) { context in
             // Visual turns per second, scaled down from real rpm so it reads as speed, not blur
-            let _ = clock.tick(context.date.timeIntervalSinceReferenceDate)
+            let _ = { clock.demo = demoFrame; clock.tick(context.date.timeIntervalSinceReferenceDate) }()
             let angle = running ? clock.value("fan", speed: 0.4 + rpm / 2500) * 360 : 0
             Image(systemName: "fan")
                 .font(.system(size: size, weight: .regular))

@@ -23,6 +23,12 @@ case "--thermals":
     print("SMC keys: \(keys.count), chip sensors: \(chips.count)")
     for f in t.fans { print("\(f.name(of: t.fans.count)): \(Int(f.rpm)) rpm (range \(Int(f.minRPM ?? 0)) to \(Int(f.maxRPM ?? 0)))") }
     print(String(format: "CPU %.1f C (hottest %.1f), GPU %.1f C", t.cpuC ?? -1, t.cpuHottestC ?? -1, t.gpuC ?? -1))
+case "--render-flow-frames":
+    let args = Array(CommandLine.arguments.dropFirst(2))
+    let dir = args.first ?? "dist/flow-frames"
+    let seconds = args.count > 1 ? Double(args[1]) ?? 4 : 4
+    let fps = args.count > 2 ? Double(args[2]) ?? 30 : 30
+    exit(MainActor.assumeIsolated { FlowFramesRender.run(directory: dir, seconds: seconds, fps: fps) })
 case "--render-dashboard":
     let file = CommandLine.arguments.dropFirst(2).first ?? "dist/dashboard.png"
     exit(MainActor.assumeIsolated { DashboardRender.run(file: file) })
@@ -38,7 +44,7 @@ case "--help", "-h":
       --diagnostics   print the log folder, recent log lines and saved crash reports
       --version       print the version
     """)
-case .some(let arg) where !["--dashboard", "--popover", "--settings", "--welcome"].contains(arg):
+case .some(let arg) where !["--dashboard", "--popover", "--settings", "--welcome", "--demo"].contains(arg):
     FileHandle.standardError.write(Data("unknown argument: \(arg)\n".utf8))
     exit(2)
 default:

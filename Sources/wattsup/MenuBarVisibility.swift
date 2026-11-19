@@ -12,6 +12,8 @@ final class MenuBarVisibility {
     private static let suppressKey = "suppressHiddenMenuBarWarning"
 
     func watch(_ item: NSStatusItem) {
+        // --demo is for recordings next to an installed copy, whose readout pushes this one out
+        guard !CommandLine.arguments.contains("--demo") else { return }
         self.item = item
         // Give the menu bar time to lay out, then recheck when screens or spaces change
         DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in self?.check() }

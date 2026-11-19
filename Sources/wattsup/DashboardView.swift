@@ -9,6 +9,8 @@ struct DashboardView: View {
     let visibility: MenuBarVisibility
     /// Rendering to an image needs the content without its scroll view
     var rendering = false
+    /// Only the hero row, power flow and charger check, for the site's animated loop
+    var marketing = false
     @State private var range: ChartRange = .fifteen
     @State private var mode: ChartMode = .power
 
@@ -25,7 +27,24 @@ struct DashboardView: View {
     }
 
     @ViewBuilder private var content: some View {
-            if let s = monitor.snapshot {
+            if marketing, let s = monitor.snapshot {
+                VStack(alignment: .leading, spacing: 16) {
+                    hero(s)
+                    HStack(alignment: .top, spacing: 16) {
+                        Card(title: "Power flow", symbol: "arrow.left.arrow.right") {
+                            Spacer(minLength: 0)
+                            PowerFlowView(snapshot: s, large: true)
+                            Spacer(minLength: 0)
+                        }
+                        Card(title: "Charger check", symbol: "checkmark.shield") {
+                            if let a = monitor.assessment { VerdictBanner(assessment: a) }
+                        }
+                        .frame(width: 360)
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(20)
+            } else if let s = monitor.snapshot {
                 VStack(alignment: .leading, spacing: 16) {
                     if visibility.hidden {
                         Label {

@@ -96,3 +96,34 @@ enum DashboardRender {
         return 0
     }
 }
+
+/// `wattsup --render-flow-frames <dir> [seconds] [fps]`: the hero and power flow as numbered PNG
+/// frames at exact time steps, from live data, for a seamless looping video on the site.
+@MainActor
+enum FlowFramesRender {
+    static func run(directory: String, seconds: Double, fps: Double) -> Int32 {
+        let monitor = PowerMonitor()
+        let settings = AppSettings()
+        monitor.refresh()
+        RunLoop.main.run(until: Date().addingTimeInterval(3))
+        monitor.refresh()
+        let dir = URL(fileURLWithPath: directory, isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let count = Int(seconds * fps)
+        for i in 0..<count {
+            let frame = DemoFrame(time: Double(i) / fps, loop: seconds)
+            let view = DashboardView(monitor: monitor, settings: settings, visibility: MenuBarVisibility(),
+                                     rendering: true, marketing: true)
+                .frame(width: 1040)
+                .environment(\.demoFrame, frame)
+                .environment(\.colorScheme, .dark)
+            let renderer = ImageRenderer(content: view)
+            renderer.scale = 2
+            guard let cg = renderer.cgImage,
+                  let png = NSBitmapImageRep(cgImage: cg).representation(using: .png, properties: [:]) else { return 1 }
+            try? png.write(to: dir.appendingPathComponent(String(format: "frame_%04d.png", i)))
+        }
+        print("Rendered \(count) frames to \(directory)")
+        return 0
+    }
+}

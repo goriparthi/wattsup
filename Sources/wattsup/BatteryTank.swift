@@ -9,6 +9,7 @@ struct BatteryTank: View {
     var height: CGFloat = 92
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var clock = AnimationClock()
+    @Environment(\.demoFrame) private var demoFrame
 
     private var level: Double { Double(snapshot.percent) / 100 }
     private var watts: Double { snapshot.batteryWatts }
@@ -26,6 +27,7 @@ struct BatteryTank: View {
                 .frame(width: width * 0.36, height: height * 0.06)
             TimelineView(.animation(minimumInterval: 1 / 60, paused: reduceMotion || !flowing)) { context in
                 Canvas { ctx, size in
+                    clock.demo = demoFrame
                     clock.tick(context.date.timeIntervalSinceReferenceDate)
                     draw(in: &ctx, size: size)
                 }
@@ -46,7 +48,7 @@ struct BatteryTank: View {
         // Speed follows the measured watts, so a fast charge visibly churns more
         let speed = min(3, 0.6 + abs(watts) / 20)
         // Accumulated, so the motion speeds up or slows down instead of jumping when watts change
-        let wavePhase = clock.value("wave", speed: speed * 2)
+        let wavePhase = clock.value("wave", speed: speed * 2, period: 2 * .pi)
         let amplitude = flowing ? max(1, size.height * 0.015) : 0.5
         let surface = size.height * (1 - level)
 

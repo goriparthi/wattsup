@@ -8,6 +8,7 @@ struct PowerFlowView: View {
     var large = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var clock = AnimationClock()
+    @Environment(\.demoFrame) private var demoFrame
 
     private struct Link {
         var from: CGPoint, to: CGPoint
@@ -24,6 +25,7 @@ struct PowerFlowView: View {
             ZStack {
                 TimelineView(.animation(minimumInterval: 1 / 60, paused: reduceMotion)) { context in
                     Canvas { ctx, _ in
+                        clock.demo = demoFrame
                         clock.tick(context.date.timeIntervalSinceReferenceDate)
                         for (i, link) in links.enumerated() { drawPipe(link, key: "pipe\(i)", in: &ctx) }
                     }
