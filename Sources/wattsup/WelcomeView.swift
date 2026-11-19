@@ -26,7 +26,7 @@ struct WelcomeView: View {
                 Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 48, height: 48)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Welcome to Wattsup").font(.title2.weight(.semibold))
-                    Text("Live power for your Mac, in the menu bar.").foregroundStyle(Theme.secondaryText)
+                    Text("Charging demystified.").foregroundStyle(Theme.secondaryText)
                 }
             }
             step(1, "Choose what the menu bar shows") {

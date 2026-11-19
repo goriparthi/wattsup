@@ -84,11 +84,12 @@ Use the native system font with tabular digits for the large stat and the native
 
 GitHub social preview is 1280 × 640 px. The README banner is 1600 × 400 px. Both show the app icon, wordmark, primary tagline, and a stylized Adapter → Mac → Battery flow. In live UI, use arrows to indicate measured direction, including Battery → Mac during discharge.
 
-1. **See watts up with your Mac.** (primary)
-2. Wattsup with your battery?
-3. See every watt your Mac moves.
-4. Know watts coming and going.
-5. Watts in. Watts out.
+1. **Charging demystified.** (primary since the charger and battery icon; as a title, drop the period: "Wattsup: Charging demystified")
+2. See watts up with your Mac.
+3. Wattsup with your battery?
+4. See every watt your Mac moves.
+5. Know watts coming and going.
+6. Watts in. Watts out.
 
 ## References
 

@@ -1,6 +1,8 @@
 # Wattsup
 
-![Wattsup: See watts up with your Mac.](brand/boards/08-README-Banner-1600x400.png)
+![Wattsup: Charging demystified](brand/readme-banner.png)
+
+**Charging demystified.**
 
 Live power telemetry for your MacBook, in the menu bar. Watts, volts and amps at a glance, a
 dashboard far deeper than the battery settings, and a charger check that tells you whether the

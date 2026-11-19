@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img"><title>Wattsup charger and battery icon, dark</title><path fill="#272728" d="M314 62H710C868 62 962 154 962 314V710C962 868 868 962 710 962H314C156 962 62 868 62 710V314C62 156 156 62 314 62Z"/>
+<path d="M244 199V302M366 199V302" fill="none" stroke="#D677E1" stroke-width="48" stroke-linecap="round"/>
+<rect x="164" y="280" width="285" height="241" rx="57" fill="#D677E1"/>
+<path d="M304 503V661Q304 708 351 708H475" fill="none" stroke="#D677E1" stroke-width="47" stroke-linecap="round"/>
+<rect x="479" y="607" width="338" height="199" rx="52" fill="none" stroke="#FF595F" stroke-width="42"/>
+<rect x="816" y="654" width="66" height="105" rx="26" fill="#FF595F"/></svg>
