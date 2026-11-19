@@ -53,8 +53,14 @@ enum StatusItemRenderer {
             }
         }
         let style = readings.isEmpty && settings.icon == .none ? .power : settings.icon
-        let symbol = icon(for: s, style: style, colored: settings.usesColors)
+        var symbol = icon(for: s, style: style, colored: settings.usesColors)
+        if let tint = settings.usesColors ? energyTint(s.energyMode) : nil {
+            symbol = (style == .battery ? BrandGlyph(s.state).image(tint: tint)
+                      : symbol?.withSymbolConfiguration(NSImage.SymbolConfiguration(paletteColors: [tint])))
+        }
         let outlined = settings.outlined && !readings.isEmpty
+        // Low Power tints the capsule amber, as macOS tints its own battery icon
+        let modeTint: NSColor? = settings.usesColors ? energyTint(s.energyMode) : nil
 
         // Column widths shared by both rows, so stacked dividers line up
         let columns = rows.map(\.count).max() ?? 0
@@ -87,9 +93,9 @@ enum StatusItemRenderer {
             if outlined {
                 let pill = NSBezierPath(roundedRect: NSRect(x: 0.5, y: 2.5, width: size.width - 1, height: height - 5),
                                         xRadius: 5, yRadius: 5)
-                NSColor.labelColor.withAlphaComponent(0.08).setFill()
+                (modeTint?.withAlphaComponent(0.16) ?? NSColor.labelColor.withAlphaComponent(0.08)).setFill()
                 pill.fill()
-                NSColor.labelColor.withAlphaComponent(0.35).setStroke()
+                (modeTint ?? NSColor.labelColor.withAlphaComponent(0.35)).setStroke()
                 pill.lineWidth = 1
                 pill.stroke()
             }
@@ -118,6 +124,14 @@ enum StatusItemRenderer {
         // Template only when nothing is colored, so plain mode adapts to any menu bar
         image.isTemplate = !settings.usesColors
         return (image, segments)
+    }
+
+    static func energyTint(_ mode: EnergyMode?) -> NSColor? {
+        switch mode {
+        case .low: return Brand.warning
+        case .high: return Brand.iris
+        default: return nil
+        }
     }
 
     static func icon(for s: PowerSnapshot, style: MenuBarIcon, colored: Bool) -> NSImage? {
@@ -168,7 +182,10 @@ final class StatusToolTips: NSObject, NSViewToolTipOwner {
         MainActor.assumeIsolated {
             let index = Int(bitPattern: data) - 1
             guard let s = snapshot, segments.indices.contains(index) else { return "Wattsup" }
-            guard let metric = segments[index].metric else { return "Wattsup: \(s.statusLine)" }
+            guard let metric = segments[index].metric else {
+                let mode = s.energyMode.flatMap { $0 == .automatic ? nil : "\n\($0.title) Mode on" } ?? ""
+                return "Wattsup: \(s.statusLine)\(mode)"
+            }
             let value = metric.text(for: s) ?? "n/a"
             return metric.help.isEmpty ? "\(metric.title): \(value)" : "\(metric.title): \(value)\n\(metric.help)"
         }

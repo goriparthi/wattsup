@@ -303,3 +303,22 @@ struct EnergyModePicker: View {
         }
     }
 }
+
+/// A pill shown while Low or High Power Mode is on; nothing in Automatic.
+struct EnergyModeBadge: View {
+    let mode: EnergyMode?
+
+    var body: some View {
+        if let mode, mode != .automatic {
+            let tint = mode == .low ? Theme.warning : Theme.accent
+            Label(mode.title, systemImage: mode == .low ? "leaf.fill" : "bolt.circle.fill")
+                .font(.caption.weight(.semibold))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Capsule().fill(tint.opacity(0.16)))
+                .overlay(Capsule().strokeBorder(tint.opacity(0.6), lineWidth: 1))
+                .foregroundStyle(tint)
+                .accessibilityLabel("\(mode.title) Mode on")
+        }
+    }
+}

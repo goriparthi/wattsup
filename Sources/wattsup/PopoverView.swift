@@ -40,7 +40,10 @@ struct PopoverView: View {
                 Text("\(s.percent)%")
                     .font(.system(size: 26, weight: .semibold, design: .rounded))
                     .monospacedDigit()
-                Text(s.statusLine).font(.callout).foregroundStyle(Theme.secondaryText)
+                HStack(spacing: 6) {
+                    Text(s.statusLine).font(.callout).foregroundStyle(Theme.secondaryText)
+                    EnergyModeBadge(mode: s.energyMode)
+                }
             }
             Spacer()
         }

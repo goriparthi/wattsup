@@ -6,7 +6,7 @@ import WattsupCore
 @MainActor
 enum MenuBarRender {
     static func run(directory: String) -> Int32 {
-        guard case .properties(let props) = SmartBattery.read(), let s = PowerSnapshot(registry: props) else {
+        guard case .properties(let props) = SmartBattery.read(), var s = PowerSnapshot(registry: props) else {
             FileHandle.standardError.write(Data("no battery reading to render\n".utf8))
             return 1
         }
@@ -18,12 +18,16 @@ enum MenuBarRender {
             ("line-battery-icon", [.watts, .volts, .amps], .line, .battery, true),
             ("stacked", [.watts, .volts, .amps, .percent, .systemWatts, .temperature], .stacked, .power, true),
             ("plain", [.watts, .percent], .line, .power, false),
+            ("lowpower", MenuBarMetric.defaults, .line, .power, true),
+            ("lowpower-battery-icon", MenuBarMetric.defaults, .line, .battery, true),
         ]
         for (name, metrics, layout, icon, colors) in cases {
             settings.metrics = metrics
             settings.layout = layout
             settings.icon = icon
             settings.usesColors = colors
+            // The live reading, with Low Power switched on for the two cases that show it
+            s.energyMode = name.hasPrefix("lowpower") ? .low : nil
             let image = StatusItemRenderer.image(metrics.filter { $0.text(for: s) != nil }, snapshot: s, settings: settings)
             for dark in [true, false] {
                 write(image, dark: dark, to: url.appendingPathComponent("\(name)-\(dark ? "dark" : "light").png"))

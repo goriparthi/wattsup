@@ -66,7 +66,10 @@ struct DashboardView: View {
                 Text("\(s.percent)%")
                     .font(.system(size: 40, weight: .semibold, design: .rounded))
                     .monospacedDigit()
-                Text(s.statusLine).font(.title3).foregroundStyle(Theme.secondaryText)
+                HStack(spacing: 8) {
+                    Text(s.statusLine).font(.title3).foregroundStyle(Theme.secondaryText)
+                    EnergyModeBadge(mode: s.energyMode)
+                }
             }
             Spacer()
             HeroStat(title: "Charger in", value: s.isExternalPower ? Units.watts(s.inputWatts) : "Unplugged",
