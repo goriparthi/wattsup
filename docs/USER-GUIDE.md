@@ -68,6 +68,26 @@ or more (typical of good GaN chargers), **Good** at 90%, **Fair** at 85%, **Poor
 under 10 W, where every charger is least efficient. Shown in the popover and the dashboard, and
 averaged per charger in Chargers you've used.
 
+## Charger report card
+
+Graded from measured samples only; each check stays ungraded until its load has happened, and
+the overall grade is the weakest check.
+
+| Check | How it is measured |
+| --- | --- |
+| Voltage under load | Sag below the negotiated voltage while the charger is above 30% of its limit |
+| Cable resistance | Slope of input voltage against current as the load varies, which separates the cable from the charger's own voltage tolerance |
+| Delivers its rating | How close it got to its limit when the Mac asked for more |
+| Connection | Unplug and replug of the same charger within 10 seconds |
+| Heat | Whether macOS slowed charging because of temperature |
+
+The first 20 seconds after plugging in are a negotiation phase and are never judged.
+
+## History
+
+The last hour is kept at full detail in memory. One averaged point per minute is saved to disk
+for 30 days, so the dashboard charts reach back 24 hours or 7 days across restarts.
+
 ## Powering accessories
 
 USB devices the Mac is powering, such as an iPhone or an AirPods case, with the power macOS

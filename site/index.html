@@ -3,436 +3,546 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Wattsup, live power for your Mac</title>
-<meta name="description" content="Wattsup is a free, open source macOS menu bar app that shows live watts, volts and amps, and tells you whether your charger is holding your Mac back.">
-<meta name="color-scheme" content="dark light">
+<title>Wattsup: live power telemetry for your Mac</title>
+<meta name="description" content="Wattsup is a free, open source macOS menu bar app that shows live charger, Mac and battery power, checks your charger and cable, and keeps every reading on your Mac.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F4F6FB" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111427" media="(prefers-color-scheme: dark)">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Wattsup">
-<meta property="og:title" content="Wattsup: See watts up with your Mac.">
-<meta property="og:description" content="Live watts, volts and amps in your menu bar, plus a charger check that tells you if the brick is the bottleneck. Free and open source.">
+<meta property="og:title" content="Wattsup: live power telemetry for your Mac">
+<meta property="og:description" content="Live charger, Mac and battery power in your menu bar, plus a charger and cable check built from measured values. Free, open source, and private by design.">
 <meta property="og:url" content="https://goriparthi.github.io/wattsup/">
 <meta property="og:image" content="https://goriparthi.github.io/wattsup/og.png">
 <meta property="og:image:width" content="1280">
 <meta property="og:image:height" content="640">
 <meta property="og:image:alt" content="Wattsup: See watts up with your Mac.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Wattsup: See watts up with your Mac.">
+<meta name="twitter:title" content="Wattsup: live power telemetry for your Mac">
+<meta name="twitter:description" content="Live charger, Mac and battery power in your menu bar, plus a charger and cable check. Free and open source.">
 <meta name="twitter:image" content="https://goriparthi.github.io/wattsup/og.png">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="apple-touch-icon" href="app-icon-256.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..750&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&amp;display=swap" rel="stylesheet">
 <style>
-/* Brand tokens from brand/BRAND.md, Color system. Dark is the default look. */
+/* Brand tokens from brand/BRAND.md. Light is the base; dark overrides below. */
 :root{
-  --bg:#111427; --surface:#1C2138;
-  --surface2:color-mix(in srgb,var(--text) 6%,var(--surface));
-  --line:color-mix(in srgb,var(--text) 16%,var(--surface));
-  --text:#F3F5FE; --muted:#B2BAD4;
-  --iris:#C5B8FF; --citron:#D8F98B;
-  --input:#8EB1FF; --system:#CFB2FF; --charging:#7CE1B5; --draining:#FFA9D5; --warn:#FFCA75;
-  --on-accent:#111427; --shadow:0 20px 50px rgba(0,0,0,.45);
-  --sans:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --canvas:#F4F6FB; --elevated:#FFFFFF;
+  --text:#171A2C; --muted:#4D5770; --iris:#4835A5; --on-iris:#FFFFFF;
+  --line:#DDE1EC; --line-strong:#C6CCDC; --subtle:#EBEEF6;
+  --shot-shadow:0 1px 2px rgba(23,26,44,.06),0 12px 32px rgba(23,26,44,.10);
+  --sans:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --pad:clamp(16px,4vw,48px); --max:1280px;
 }
-@media (prefers-color-scheme: light){
+@media (prefers-color-scheme: dark){
   :root{
-    --bg:#F4F6FB; --surface:#FFFFFF;
-    --text:#171A2C; --muted:#4D5770;
-    --iris:#4835A5; --citron:#3D6418;
-    --input:#254EAF; --system:#65439B; --charging:#00634F; --draining:#8F3768; --warn:#855006;
-    --on-accent:#FFFFFF; --shadow:0 20px 50px rgba(23,26,44,.12);
+    --canvas:#111427; --elevated:#1C2138;
+    --text:#F3F5FE; --muted:#B2BAD4; --iris:#C5B8FF; --on-iris:#111427;
+    --line:#2A3050; --line-strong:#3A4166; --subtle:#171B31;
+    --shot-shadow:0 1px 2px rgba(0,0,0,.3),0 16px 40px rgba(0,0,0,.35);
   }
 }
-*{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--text);font:400 17px/1.6 var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
-a{color:var(--iris)}
-.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
-.mono,.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
-.skip{position:absolute;left:-999px}.skip:focus{left:12px;top:12px;background:var(--surface);padding:8px 12px;z-index:9}
-header.nav{display:flex;align-items:center;justify-content:space-between;padding:20px 0}
-.brand{display:flex;align-items:center;text-decoration:none}
-.brand img{display:block;height:30px;width:auto;min-width:100px;margin:6px 0}
-.nav a.link{color:var(--muted);text-decoration:none;font-size:15px}
-.nav a.link:hover{color:var(--text)}
-h1{font-size:clamp(38px,7vw,68px);line-height:1.05;letter-spacing:-.03em;margin:0 0 18px;font-weight:700}
-.hero-icon{display:block;width:96px;height:96px;margin:0 0 20px}
-h1 em{font-style:normal;color:var(--iris)}
-h2{font-size:clamp(26px,4vw,38px);line-height:1.15;letter-spacing:-.02em;margin:0 0 14px}
-h3{font-size:17px;margin:0 0 6px}
-p{margin:0 0 14px}
-.lede{font-size:clamp(18px,2.4vw,21px);color:var(--muted);max-width:620px}
-.eyebrow{font:500 13px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--iris);margin-bottom:12px}
-section{padding:72px 0}
-.hero{padding:40px 0 64px}
-.btns{display:flex;flex-wrap:wrap;gap:12px;margin:28px 0 12px}
-.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 20px;border-radius:10px;font-weight:600;font-size:16px;text-decoration:none;border:1px solid var(--line);color:var(--text);background:var(--surface)}
-.btn:hover{border-color:var(--iris)}
-.btn.primary{background:var(--iris);border-color:var(--iris);color:var(--on-accent)}
-.btn:focus-visible,a:focus-visible{outline:3px solid var(--iris);outline-offset:3px}
-.small{font-size:14px;color:var(--muted)}
-.mocks{display:grid;gap:24px;margin-top:44px;grid-template-columns:1fr}
-@media (min-width:860px){.mocks{grid-template-columns:1.1fr 1fr;align-items:start}}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
-.cap{font-size:13px;color:var(--muted);margin:10px 4px 0}
-/* menu bar mock */
-.menubar{display:flex;align-items:center;justify-content:flex-end;gap:14px;height:30px;padding:0 14px;border-radius:10px 10px 0 0;background:var(--surface2);border:1px solid var(--line);font-size:13px;white-space:nowrap;position:relative;z-index:2}
-@media (max-width:520px){.menubar .dim{display:none}}
-.mocks>*{min-width:0}
-.menubar .dim{color:var(--muted)}
-.readout{display:inline-flex;align-items:center;font-family:var(--mono);font-weight:500;font-size:12px;line-height:1;border:1px solid var(--muted);border-radius:99px;padding:3px 9px 3px 7px}
-.readout svg{width:11px;height:11px;margin-right:7px;flex:none;color:var(--input)}
-.readout span{padding:0 7px;border-left:1px solid var(--line)}.readout svg+span{border-left:0;padding-left:0}.readout span:last-child{padding-right:0}
-.readout span[data-tip]{position:relative;cursor:default}
-.readout span[data-tip]::after{content:attr(data-tip);position:absolute;top:calc(100% + 12px);left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);font:500 11px var(--sans);padding:4px 8px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s;z-index:5}
-.readout span[data-tip]:last-child::after{left:auto;right:0;transform:none}
-.readout span[data-tip]:hover::after,.readout span[data-tip]:focus-visible::after{opacity:1}
-.pop{padding:20px;border-radius:0 0 16px 16px;border-top:0}
-.pop-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px}
-.pill{font:500 12px var(--mono);padding:3px 9px;border-radius:99px;background:color-mix(in srgb,var(--charging) 20%,transparent);color:var(--charging)}
-.flow{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:center;gap:6px;text-align:center}
-.node{border:1px solid var(--line);background:var(--surface2);border-radius:12px;padding:12px 4px}
-.node b{display:block;font-size:12px;font-weight:500;color:var(--muted)}
-.node .num{font-size:18px;font-weight:700}
-.leg{display:flex;flex-direction:column;align-items:center;font:500 12px var(--mono)}
-.leg i{display:block;width:34px;height:3px;border-radius:3px;margin-top:4px;background:linear-gradient(90deg,transparent,currentColor,transparent);background-size:200% 100%;animation:flow 1.6s linear infinite}
-@keyframes flow{from{background-position:200% 0}to{background-position:-200% 0}}
-@media (prefers-reduced-motion:reduce){.leg i{animation:none}}
-.c-in{color:var(--input)}.c-sys{color:var(--system)}.c-bat{color:var(--charging)}.c-drain{color:var(--draining)}.c-warn{color:var(--warn)}
-.kv{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin-top:16px;font-size:14px}
-.kv span{color:var(--muted)}.kv b{font-family:var(--mono);font-weight:500;text-align:right}
-.kv div{display:flex;justify-content:space-between;gap:8px}
-/* hybrid power flow: pipe thickness = watts, particles show direction */
-.flow2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.9fr) minmax(0,1fr) minmax(0,.9fr) minmax(0,1fr);column-gap:6px;align-items:center;text-align:center}
-.flow2 .node{padding:10px 2px 8px;min-height:68px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px}
-.flow2 .num{font-size:12px;font-weight:700;color:inherit;white-space:nowrap}
-.flow2 .node b{font-size:11px;white-space:nowrap}
-@media (min-width:440px){.flow2 .num{font-size:13px}.flow2 .node b{font-size:12px}}
-.node.g{border-color:color-mix(in srgb,currentColor 50%,var(--line));box-shadow:0 0 18px color-mix(in srgb,currentColor 26%,transparent)}
-.node.off{color:var(--muted);box-shadow:none;border-style:dashed}
-.pipe{position:relative;height:var(--t);align-self:center}
-.pipe .pl{position:absolute;left:50%;bottom:calc(100% + 5px);transform:translateX(-50%);font:500 10.5px/1 var(--mono);white-space:nowrap}
-.tube{position:absolute;inset:0;border-radius:99px;background:color-mix(in srgb,currentColor 22%,transparent)}
-.tube i{position:absolute;top:50%;left:0;width:calc(var(--t)*1.5);height:calc(var(--t)*.62);border-radius:99px;background:currentColor;box-shadow:0 0 8px 1px currentColor;transform:translate(-50%,-50%);opacity:0;animation:pf var(--d) linear infinite}
-.tube i:nth-child(2){animation-delay:calc(var(--d)/-3)}.tube i:nth-child(3){animation-delay:calc(var(--d)/-1.5)}
-.pipe.rev .tube i{animation-direction:reverse}
-.pipe.idle .tube{background:repeating-linear-gradient(90deg,var(--line) 0 4px,transparent 4px 8px);border-radius:0}
-@keyframes pf{0%{left:0;opacity:0}15%{opacity:1}85%{opacity:1}100%{left:100%;opacity:0}}
-.ring{position:relative;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(currentColor calc(var(--p)*1%),color-mix(in srgb,currentColor 20%,transparent) 0)}
-.ring::before{content:"";position:absolute;inset:5px;border-radius:50%;background:var(--surface2)}
-.ring span{position:relative;font:700 11px var(--mono);color:var(--text)}
-.branch{grid-column:2/5;display:flex;flex-direction:column;align-items:center}
-.branch .stem{width:3px;height:16px;background:repeating-linear-gradient(to bottom,var(--system) 0 4px,transparent 4px 7px)}
-.chip{font:500 11px/1.3 var(--mono);color:var(--system);border:1px dashed color-mix(in srgb,var(--system) 70%,var(--line));border-radius:10px;padding:5px 9px;text-align:center}
-.em{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font-size:14px}
-.em>span{display:block;color:var(--muted);margin-bottom:8px}
-.segs{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:10px;overflow:hidden;font:500 13px var(--mono);text-align:center}
-.segs span{padding:6px 4px;background:var(--surface2);color:var(--muted)}
-.segs span.on{background:var(--iris);color:var(--on-accent)}
-.em small{display:block;margin-top:8px;color:var(--muted);font-size:12px;line-height:1.4}
-/* battery tank: bubbles rise while charging, drops fall while draining */
-.tanks{display:grid;grid-template-columns:1fr 1fr;gap:12px;text-align:center}
-.tankw{position:relative;width:64px;margin:10px auto 0}
-.tankw::before{content:"";position:absolute;top:-6px;left:50%;width:22px;height:6px;border-radius:4px 4px 0 0;background:var(--line);transform:translateX(-50%)}
-.tank{position:relative;height:104px;border:2px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface2)}
-.liquid{position:absolute;left:0;right:0;bottom:0;height:calc(var(--p)*1%);overflow:hidden;border-top:2px solid currentColor;background:linear-gradient(to top,color-mix(in srgb,currentColor 55%,transparent),color-mix(in srgb,currentColor 28%,transparent))}
-.liquid i{position:absolute;opacity:0}
-.liquid.up i{bottom:-8px;width:7px;height:7px;border-radius:50%;border:1.5px solid currentColor;animation:rise var(--d) linear infinite}
-.liquid.down i{top:0;width:5px;height:8px;border-radius:50% 50% 50% 50%/62% 62% 38% 38%;background:currentColor;animation:fall var(--d) linear infinite}
-.liquid i:nth-child(1){left:14%}.liquid i:nth-child(2){left:42%;animation-delay:calc(var(--d)/-4)}.liquid i:nth-child(3){left:68%;animation-delay:calc(var(--d)/-2)}.liquid i:nth-child(4){left:28%;animation-delay:calc(var(--d)/-1.33)}
-@keyframes rise{0%{transform:translateY(0);opacity:0}15%{opacity:.95}100%{transform:translateY(-100px);opacity:0}}
-@keyframes fall{0%{transform:translateY(0);opacity:0}15%{opacity:1}100%{transform:translateY(60px);opacity:0}}
-.tanks .num{display:block;margin-top:10px;font-weight:700}
-.tanks small{display:block;font-size:13px;color:var(--muted)}
-@media (prefers-reduced-motion:reduce){.tube i,.liquid i{animation-play-state:paused}}
-.two{display:grid;gap:24px;margin-top:36px;grid-template-columns:minmax(0,1fr)}
-@media (min-width:860px){.two{grid-template-columns:1fr 1fr;align-items:start}}
-.two>div>.card{padding:20px}.two h3{margin-top:16px}.two p.t{color:var(--muted);font-size:15px}
-.grid2{display:grid;gap:16px;margin-top:28px;grid-template-columns:minmax(0,1fr)}
-@media (min-width:640px){.grid2{grid-template-columns:1fr 1fr}}
-.tag-ok{font:500 12px var(--mono);padding:3px 9px;border-radius:99px;background:color-mix(in srgb,var(--charging) 20%,transparent);color:var(--charging)}
-.big{font:700 40px/1 var(--mono);letter-spacing:-.02em;color:var(--charging)}
-.lost{color:var(--muted);font-size:14px;margin:6px 0 0}
-/* verdict */
-.split{display:grid;gap:32px;grid-template-columns:1fr}
-@media (min-width:860px){.split{grid-template-columns:1fr 1.1fr;align-items:center}}
-.verdict{padding:22px}
-.vhead{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
-.vhead strong{font-size:15px}
-.tag-warn{font:500 12px var(--mono);padding:3px 9px;border-radius:99px;background:color-mix(in srgb,var(--warn) 20%,transparent);color:var(--warn)}
-.bar{height:12px;border-radius:99px;background:var(--surface2);border:1px solid var(--line);overflow:hidden;margin:6px 0 4px}
-.bar i{display:block;height:100%;width:96%;background:linear-gradient(90deg,var(--input),var(--warn))}
-.barlab{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
-.bars{display:grid;gap:10px;margin:18px 0}
-.seg{display:flex;height:14px;border-radius:99px;overflow:hidden;border:1px solid var(--line)}
-.seg i{display:block;height:100%}
-.msg{margin-top:16px;padding:14px 16px;border-radius:12px;border:1px solid color-mix(in srgb,var(--warn) 55%,var(--line));background:color-mix(in srgb,var(--warn) 9%,transparent);font-weight:500}
-.chargers{margin-top:16px;width:100%;border-collapse:collapse;font-size:14px}
-.chargers th{font-weight:500;color:var(--muted);text-align:left;padding:6px 0;border-bottom:1px solid var(--line)}
-.chargers td{padding:7px 0;border-bottom:1px solid var(--line)}
-.chargers td:last-child,.chargers th:last-child{text-align:right;font-family:var(--mono)}
-.chargers caption{text-align:left;font-weight:600;margin-bottom:6px;font-size:14px}
-.checks{list-style:none;padding:0;margin:18px 0 0;display:grid;gap:10px}
-.checks li{padding-left:26px;position:relative}
-.checks li::before{content:"";position:absolute;left:0;top:.6em;width:12px;height:3px;border-radius:3px;background:var(--iris)}
-/* grid */
-.grid{display:grid;gap:16px;margin-top:28px;grid-template-columns:1fr}
-@media (min-width:640px){.grid{grid-template-columns:1fr 1fr}}
-@media (min-width:960px){.grid{grid-template-columns:repeat(3,1fr)}}
-.feat{padding:20px}
-.feat p{color:var(--muted);font-size:15px;margin:0}
-.feat .num{display:inline-block;margin-top:12px;font-size:13px;color:var(--text);background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:3px 8px}
-.pd{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
-.pd span{font:500 13px var(--mono);padding:5px 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface2)}
-.pd span.on{border-color:var(--iris);color:var(--iris)}
-.facts{display:grid;gap:14px;grid-template-columns:1fr;margin-top:26px}
-@media (min-width:640px){.facts{grid-template-columns:repeat(4,1fr)}}
-.fact{padding:18px;text-align:left}
-.fact b{display:block;font-family:var(--mono);font-size:20px;color:var(--iris)}
-.fact span{font-size:14px;color:var(--muted)}
-pre{margin:16px 0 0;padding:14px 16px;border-radius:12px;background:var(--surface2);border:1px solid var(--line);overflow-x:auto;font:400 14px var(--mono);color:var(--muted)}
-ol.steps{padding-left:22px;margin:16px 0}
-ol.steps li{margin-bottom:8px}
-footer{border-top:1px solid var(--line);padding:32px 0 48px;color:var(--muted);font-size:14px}
-footer .wrap{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-between}
-.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--canvas);color:var(--text);font:400 17px/1.65 var(--sans);font-feature-settings:"cv11","ss01";-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+img{max-width:100%;height:auto;display:block}
+a{color:var(--iris);text-underline-offset:3px}
+a:hover{text-decoration-thickness:2px}
+:focus-visible{outline:2px solid var(--iris);outline-offset:3px;border-radius:4px}
+h1,h2,h3{color:var(--text);margin:0;font-weight:650;letter-spacing:-.02em;text-wrap:balance}
+h1{font-size:clamp(36px,5.2vw,60px);line-height:1.08;letter-spacing:-.03em}
+h2{font-size:clamp(28px,3.4vw,40px);line-height:1.15}
+h3{font-size:17px;line-height:1.4;font-weight:600;letter-spacing:-.01em}
+p{margin:0}
+.num{font-variant-numeric:tabular-nums}
+code{font:500 .9em ui-monospace,"SF Mono",Menlo,monospace;background:var(--subtle);border:1px solid var(--line);border-radius:5px;padding:1px 5px;overflow-wrap:anywhere}
+
+.container{max-width:var(--max);margin:0 auto;padding:0 var(--pad)}
+.skip{position:absolute;left:12px;top:-60px;background:var(--elevated);color:var(--text);padding:10px 14px;border:1px solid var(--line);border-radius:8px;z-index:10}
+.skip:focus{top:12px}
+
+/* Header */
+.site-header{border-bottom:1px solid var(--line);background:var(--canvas)}
+.nav{display:flex;align-items:center;gap:32px;height:68px}
+.brand{display:flex;align-items:center;flex:none}
+.brand img{height:26px;width:auto}
+.nav-links{display:flex;gap:28px;margin:0;padding:0;list-style:none}
+.nav-links a,.nav-gh{color:var(--muted);text-decoration:none;font-size:15px;font-weight:500}
+.nav-links a:hover,.nav-gh:hover{color:var(--text)}
+.nav-end{margin-left:auto;display:flex;align-items:center;gap:20px}
+.nav-gh{display:inline-flex;align-items:center;gap:8px}
+@media (max-width:880px){.nav-links{display:none}}
+@media (max-width:480px){.nav-gh span{display:none}.nav .btn{padding:8px 14px}}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 20px;border-radius:8px;font:600 15px/1.2 var(--sans);text-decoration:none;border:1px solid transparent;white-space:nowrap}
+.btn-primary{background:var(--iris);color:var(--on-iris)}
+.btn-primary:hover{filter:brightness(1.08)}
+.btn-secondary{border-color:var(--line-strong);color:var(--text);background:var(--elevated)}
+.btn-secondary:hover{border-color:var(--iris)}
+.btn-sm{min-height:36px;padding:7px 14px;font-size:14px}
+.btn svg{flex:none}
+.actions{display:flex;flex-wrap:wrap;gap:12px}
+
+/* Screenshots */
+.shot{border-radius:12px;border:1px solid var(--line);box-shadow:var(--shot-shadow);background:#111427}
+figure{margin:0}
+figcaption{margin-top:14px;font-size:14px;color:var(--muted);line-height:1.5}
+
+/* Hero */
+.hero{padding:clamp(56px,9vw,112px) 0 0;text-align:center}
+.hero-copy{max-width:760px;margin:0 auto}
+.hero .lede{text-wrap:pretty;margin:24px auto 0;max-width:620px;font-size:clamp(18px,1.6vw,20px);color:var(--muted);line-height:1.6}
+.hero .actions{justify-content:center;margin-top:36px}
+.hero .note{margin-top:20px;font-size:14px;color:var(--muted)}
+.hero-shot{margin:clamp(48px,6vw,72px) auto 0;max-width:1160px}
+
+/* Trust strip */
+.trust{text-align:left;margin-top:clamp(56px,7vw,96px);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.trust ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,1fr)}
+.trust li{padding:28px 24px;display:flex;gap:14px;align-items:flex-start;font-size:15px;line-height:1.5;color:var(--muted)}
+.trust li + li{border-left:1px solid var(--line)}
+.trust li:first-child{padding-left:0}
+.trust strong{display:block;color:var(--text);font-weight:600;margin-bottom:2px}
+.trust svg{color:var(--iris);flex:none;margin-top:2px}
+@media (max-width:1100px){
+  .trust ul{grid-template-columns:repeat(2,1fr)}
+  .trust li{padding:24px}
+  .trust li:nth-child(odd){padding-left:0;border-left:0}
+  .trust li:nth-child(n+3){border-top:1px solid var(--line)}
+}
+@media (max-width:620px){
+  .trust ul{grid-template-columns:1fr}
+  .trust li{padding:20px 0;border-left:0 !important}
+  .trust li + li{border-top:1px solid var(--line)}
+}
+
+/* Sections */
+.section{padding:clamp(72px,9vw,128px) 0}
+.section + .section{border-top:1px solid var(--line)}
+.section-head{max-width:720px}
+.section-head p{margin-top:16px;font-size:18px;color:var(--muted)}
+.prose{max-width:68ch}
+.prose p + p{margin-top:16px}
+.prose p{color:var(--muted)}
+.split{display:grid;grid-template-columns:1fr;gap:48px;align-items:center}
+.split .prose h2{margin-bottom:20px}
+@media (min-width:900px){
+  .split{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(48px,6vw,96px)}
+  .split.reverse > :first-child{order:2}
+}
+.checklist{list-style:none;margin:28px 0 0;padding:0;display:grid;gap:14px}
+.checklist li{position:relative;padding-left:30px;color:var(--muted)}
+.checklist li strong{color:var(--text);font-weight:600}
+.checklist li::before{content:"";position:absolute;left:2px;top:.45em;width:14px;height:8px;border-left:2px solid var(--iris);border-bottom:2px solid var(--iris);transform:rotate(-45deg) translateY(-1px)}
+
+.popover-fig{justify-self:center;width:min(100%,380px)}
+.popover-fig .shot{border-radius:22px}
+.hero-shot .shot{border-radius:16px}
+
+/* Charger check */
+.verdicts{margin-top:28px;display:grid;gap:0;border-top:1px solid var(--line)}
+.verdicts div{padding:16px 0;border-bottom:1px solid var(--line)}
+.verdicts dt{font-weight:600}
+.verdicts dd{margin:4px 0 0;color:var(--muted);font-size:16px}
+.report{margin-top:clamp(56px,6vw,80px)}
+.report > h3{font-size:20px}
+.report > p{margin-top:8px;color:var(--muted);max-width:68ch}
+.report-grid{margin:28px 0 0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--line);border-radius:12px;background:var(--elevated);overflow:hidden}
+.report-grid li{padding:22px 22px 24px}
+.report-grid li + li{border-left:1px solid var(--line)}
+.report-grid p{margin-top:6px;font-size:15px;line-height:1.55;color:var(--muted)}
+@media (max-width:1180px){
+  .report-grid{grid-template-columns:repeat(2,1fr)}
+  .report-grid li{border-left:0 !important;border-top:1px solid var(--line)}
+  .report-grid li:nth-child(-n+2){border-top:0}
+  .report-grid li:nth-child(even){border-left:1px solid var(--line) !important}
+}
+@media (max-width:620px){
+  .report-grid{grid-template-columns:1fr}
+  .report-grid li{border-left:0 !important;border-top:1px solid var(--line)}
+  .report-grid li:first-child{border-top:0}
+  .report-grid li:nth-child(2){border-top:1px solid var(--line)}
+}
+
+/* Menu bar */
+.capsules{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:32px}
+.capsule{border-radius:10px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;padding:18px 12px}
+.capsule.dark{background:#1F1F1F}
+.capsule.light{background:#EDEDED}
+.capsule img{width:100%;max-width:257px}
+.capsules figcaption{grid-column:1/-1;margin-top:2px}
+@media (max-width:420px){.capsules{grid-template-columns:1fr}}
+.settings-fig{justify-self:center;width:min(100%,480px)}
+.settings-fig .shot{border-radius:14px}
+
+/* Feature grid */
+.grid{margin:56px 0 0;padding:0;list-style:none;display:grid;grid-template-columns:1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.grid li{background:var(--elevated);padding:28px 28px 30px}
+.grid svg{color:var(--iris);display:block;margin-bottom:16px}
+.grid p{margin-top:6px;font-size:15px;line-height:1.6;color:var(--muted)}
+@media (min-width:720px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media (min-width:1100px){.grid{grid-template-columns:repeat(3,1fr)}}
+
+/* Privacy */
+.facts{margin:0;padding:0;list-style:none;display:grid;gap:0;border-top:1px solid var(--line)}
+.facts li{display:flex;gap:16px;padding:20px 0;border-bottom:1px solid var(--line)}
+.facts svg{color:var(--iris);flex:none;margin-top:3px}
+.facts strong{display:block;font-weight:600}
+.facts span{color:var(--muted);font-size:16px}
+.split.top{align-items:start}
+
+/* Install */
+.steps{counter-reset:step;list-style:none;margin:32px 0 0;padding:0;display:grid;gap:20px}
+.steps li{counter-increment:step;display:flex;gap:16px;align-items:baseline;color:var(--muted)}
+.steps li::before{content:counter(step);flex:none;width:28px;height:28px;border-radius:50%;border:1px solid var(--line-strong);color:var(--text);font:600 14px/26px var(--sans);text-align:center;font-variant-numeric:tabular-nums;transform:translateY(-1px)}
+.steps strong{color:var(--text);font-weight:600}
+.install-card{background:var(--elevated);border:1px solid var(--line);border-radius:12px;padding:clamp(24px,3vw,40px)}
+.install-card h3{font-size:20px}
+.install-card dl{margin:20px 0 28px;display:grid;gap:0;border-top:1px solid var(--line)}
+.install-card dl div{display:flex;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid var(--line);font-size:15px}
+.install-card dt{color:var(--muted)}
+.install-card dd{margin:0;text-align:right;font-weight:500}
+
+/* FAQ */
+.faq{margin-top:48px;max-width:860px;border-top:1px solid var(--line)}
+.faq details{border-bottom:1px solid var(--line)}
+.faq summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:24px;padding:22px 0;font-weight:600;font-size:17px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"";flex:none;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg) translateY(-3px)}
+.faq details[open] summary::after{transform:rotate(-135deg) translateY(-1px)}
+.faq details p{padding:0 0 24px;color:var(--muted);max-width:70ch}
+
+/* Footer */
+.site-footer{border-top:1px solid var(--line);padding:48px 0 56px;font-size:15px;color:var(--muted)}
+.footer-row{display:flex;flex-wrap:wrap;gap:24px 48px;justify-content:space-between;align-items:flex-start}
+.footer-brand img{height:24px;width:auto}
+.footer-brand p{margin-top:12px}
+.footer-links{display:flex;flex-wrap:wrap;gap:12px 28px;margin:0;padding:0;list-style:none}
+.footer-links a{color:var(--muted);text-decoration:none}
+.footer-links a:hover{color:var(--text);text-decoration:underline}
+
+@media (max-width:480px){.hero .actions{flex-direction:column;align-items:stretch;max-width:320px;margin-left:auto;margin-right:auto}}
+
+@media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important;scroll-behavior:auto !important}}
 </style>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
-<div class="wrap">
-<header class="nav">
-  <a class="brand" href="#top" aria-label="Wattsup home"><picture><source srcset="logo-light.svg" media="(prefers-color-scheme: light)"><img src="logo-dark.svg" alt="Wattsup" width="152" height="30"></picture></a>
-  <a class="link" href="https://github.com/goriparthi/wattsup">GitHub</a>
+
+<header class="site-header">
+  <div class="container nav">
+    <a class="brand" href="#top" aria-label="Wattsup home">
+      <picture>
+        <source srcset="logo-dark.svg" media="(prefers-color-scheme: dark)">
+        <img src="logo-light.svg" alt="Wattsup" width="132" height="26">
+      </picture>
+    </a>
+    <nav aria-label="Primary">
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#charger-check">Charger check</a></li>
+        <li><a href="#privacy">Privacy</a></li>
+        <li><a href="#download">Download</a></li>
+      </ul>
+    </nav>
+    <div class="nav-end">
+      <a class="nav-gh" href="https://github.com/goriparthi/wattsup">
+        <svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+        <span>GitHub</span>
+      </a>
+      <a class="btn btn-primary btn-sm" href="https://github.com/goriparthi/wattsup/releases/latest">Download</a>
+    </div>
+  </div>
 </header>
-</div>
 
 <main id="main">
-<section class="hero" id="top">
-  <div class="wrap">
-    <p class="eyebrow">Free and open source for macOS</p>
-    <img class="hero-icon" src="app-icon-256.png" alt="Wattsup app icon" width="96" height="96">
-    <h1>See watts up with <em>your Mac.</em></h1>
-    <p class="lede">Live watts, volts and amps in your menu bar, and a charger check that tells you whether the brick is the bottleneck.</p>
-    <div class="btns">
-      <a class="btn primary" href="https://github.com/goriparthi/wattsup/releases">Download for Mac</a>
-      <a class="btn" href="https://github.com/goriparthi/wattsup">View on GitHub</a>
-    </div>
-    <p class="small">macOS 14 or later. Apple silicon MacBooks. MIT licensed.</p>
-
-    <div class="mocks">
-      <figure style="margin:0">
-        <div class="menubar" role="img" aria-label="Menu bar capsule showing 29.8 watts from the wall, charger at 41 percent load, Mac using 19.6 watts, battery at 100 percent">
-          <span class="readout"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M9.3 1 3 9.2h4L6.4 15 13 6.6H8.9z"/></svg><span class="c-in" data-tip="From the wall" tabindex="0">29.8W</span><span class="c-in" data-tip="Charger load" tabindex="0">41%</span><span class="c-sys" data-tip="Mac uses" tabindex="0">19.6W</span><span class="c-bat" data-tip="Battery percent" tabindex="0">100%</span></span>
-          <span class="dim">Wed 9:41</span>
+  <section class="hero" id="top" aria-labelledby="hero-title">
+    <div class="container">
+      <div class="hero-copy">
+        <h1 id="hero-title">Live power telemetry for your Mac</h1>
+        <p class="lede">Wattsup shows what your charger delivers, what your Mac uses and what your battery stores, right in the menu bar, and tells you when the charger or cable is holding you back.</p>
+        <div class="actions">
+          <a class="btn btn-primary" href="https://github.com/goriparthi/wattsup/releases/latest">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v10M5.5 8.5 10 13l4.5-4.5M4 16.5h12"/></svg>
+            Download for Mac
+          </a>
+          <a class="btn btn-secondary" href="https://github.com/goriparthi/wattsup">View on GitHub</a>
         </div>
-        <div class="card pop" role="group" aria-label="Popover showing live power flow from charger to Mac to battery, with an accessory branch and Energy Mode">
-          <div class="pop-top"><b>Power flow</b><span class="pill">Charging, 99%</span></div>
-          <div class="flow2">
-            <div class="node g c-in"><b>Charger</b><span class="num">34.4 W</span></div>
-            <div class="pipe c-in" style="--t:9px;--d:1.1s"><span class="pl">34.4 W</span><div class="tube"><i></i><i></i><i></i></div></div>
-            <div class="node g c-sys"><b>Mac uses</b><span class="num">21.5 W</span></div>
-            <div class="pipe c-bat" style="--t:5px;--d:1.9s"><span class="pl">+13.2 W</span><div class="tube"><i></i><i></i><i></i></div></div>
-            <div class="node g c-bat"><b>Battery</b><div class="ring" style="--p:99"><span>99%</span></div></div>
-            <div class="branch"><div class="stem"></div><div class="chip">iPhone, up to 12 W</div></div>
-          </div>
-          <div class="kv">
-            <div><span>Input</span><b>20.0 V</b></div>
-            <div><span>Current</span><b>1.72 A</b></div>
-            <div><span>Temp</span><b>30.6 °C</b></div>
-            <div><span>Charger load</span><b>49%</b></div>
-          </div>
-          <div class="em">
-            <span>Energy Mode</span>
-            <div class="segs" role="img" aria-label="Energy Mode, Automatic selected, Low Power available"><span>Low Power</span><span class="on">Automatic</span></div>
-            <small>Changing it asks for an admin password, because macOS requires it.</small>
-          </div>
-        </div>
-        <figcaption class="cap">The default menu bar readout and the popover, charging from a 70 W charger. The dashed branch is an accessory allocation, not a live reading.</figcaption>
+        <p class="note">Free and open source. macOS 14 or later on Apple silicon MacBooks. Notarized by Apple.</p>
+      </div>
+      <figure class="hero-shot">
+        <img class="shot" src="images/dashboard-crop.jpg" width="2000" height="1637" fetchpriority="high"
+             alt="The Wattsup dashboard: a fully charged battery, charger input of 19.8 W at 20 V, a power flow diagram from charger to Mac to battery with a MagSafe charging case branching off the Mac, a charger check reporting headroom on a 70 W charger, energy mode controls, and a history chart.">
       </figure>
-      <div>
-        <h2>Pick your numbers.</h2>
-        <p class="lede" style="font-size:18px">Choose from 14 readings: power in or out, voltage, current, Mac uses, battery power, from the wall, charger loss, charger load, battery percent, time, temperature, health, energy mode and powering accessories. Reorder them in Settings, show one line or two stacked rows, and keep them in an outlined capsule, colored by meaning.</p>
-        <p class="lede" style="font-size:18px">The default readout is From the wall, Charger load, Mac uses and Battery percent. Hover any number for a tooltip that names it. Click for a live flow from charger to Mac to battery, with watts on every pipe.</p>
-      </div>
     </div>
-  </div>
-</section>
 
-<section id="flow">
-  <div class="wrap">
-    <p class="eyebrow">Power flow</p>
-    <h2>Watch every watt move.</h2>
-    <p class="lede">Glowing Charger, Mac and Battery nodes joined by pipes, like the energy screen in a hybrid car. A thicker pipe means more watts, and glowing particles stream in the real direction.</p>
-    <div class="two">
-      <div>
-        <div class="card" role="group" aria-label="Unplugged power flow: battery powers the Mac">
-          <div class="pop-top"><b>On battery</b><span class="tag-warn" style="color:var(--draining);background:color-mix(in srgb,var(--draining) 20%,transparent)">Draining</span></div>
-          <div class="flow2">
-            <div class="node off"><b>Charger</b><span class="num">None</span></div>
-            <div class="pipe idle" style="--t:3px"></div>
-            <div class="node g c-sys"><b>Mac uses</b><span class="num">12.3 W</span></div>
-            <div class="pipe c-drain rev" style="--t:5px;--d:2s"><span class="pl">−12.3 W</span><div class="tube"><i></i><i></i><i></i></div></div>
-            <div class="node g c-drain"><b>Battery</b><div class="ring" style="--p:62"><span>62%</span></div></div>
-          </div>
-        </div>
-        <h3>Direction you can trust</h3>
-        <p class="t">Unplugged, particles run from Battery to Mac. Plugged in, they run from the charger. Each pipe is labeled with its live watts, and the battery node carries a charge ring.</p>
-      </div>
-      <div>
-        <div class="card" role="group" aria-label="Battery tank, charging and draining">
-          <div class="tanks">
-            <div>
-              <div class="tankw c-bat"><div class="tank"><div class="liquid up" style="--p:99;--d:1.6s"><i></i><i></i><i></i><i></i></div></div></div>
-              <span class="num c-bat">+13.2 W</span><small>Charging</small>
-            </div>
-            <div>
-              <div class="tankw c-drain"><div class="tank"><div class="liquid down" style="--p:62;--d:2.2s"><i></i><i></i><i></i><i></i></div></div></div>
-              <span class="num c-drain">−12.3 W</span><small>On battery</small>
-            </div>
-          </div>
-        </div>
-        <h3>Battery tank</h3>
-        <p class="t">Your battery drawn as a tank of liquid. Bubbles rise as it fills while charging, drops fall as it drains, and the speed follows the watts.</p>
+    <div class="container">
+      <div class="trust">
+        <ul>
+          <li>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="14" height="10" rx="1.5"/><path d="M7 17h6M10 14v3"/></svg>
+            <div><strong>Readings stay on your Mac</strong>No account, no analytics, no telemetry sent anywhere.</div>
+          </li>
+          <li>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2.5 4 5v4.5c0 3.8 2.6 6.9 6 8 3.4-1.1 6-4.2 6-8V5l-6-2.5Z"/><path d="m7.5 10 1.8 1.8L12.8 8.3"/></svg>
+            <div><strong>Notarized by Apple</strong>Signed with a Developer ID and checked by Gatekeeper.</div>
+          </li>
+          <li>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 6-4 4 4 4M13 6l4 4-4 4"/></svg>
+            <div><strong>Open source, MIT</strong>Every line that reads your Mac is public on GitHub.</div>
+          </li>
+          <li>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="9" width="12" height="8" rx="1.5"/><path d="M7 9V6.5a3 3 0 0 1 5.8-1"/></svg>
+            <div><strong>No admin rights to read</strong>A password is asked only to change energy mode.</div>
+          </li>
+        </ul>
       </div>
     </div>
-    <div class="grid2">
-      <article class="card feat"><h3>Powering accessories</h3><p>Lists the USB devices your Mac is powering, such as an iPhone or an AirPods case, with the power macOS allocated to each. It shows as a branch off the Mac in the flow. These are allocations, the most a device may draw, not live readings.</p><span class="num">iPhone, up to 12 W</span></article>
-      <article class="card feat"><h3>Energy Mode</h3><p>See and switch Low Power or Automatic (High Power on Macs that support it) from the popover. Changing it asks for an admin password, because macOS requires it.</p><span class="num">Low Power / Automatic</span></article>
-    </div>
-  </div>
-</section>
+  </section>
 
-<section id="charger" style="background:var(--surface);border-block:1px solid var(--line)">
-  <div class="wrap split">
-    <div>
-      <p class="eyebrow">Charger check</p>
-      <h2>Is your charger holding you back?</h2>
-      <p class="lede" style="font-size:18px">Hotel desk, airport gate, a borrowed brick. Wattsup compares what your Mac is asking for, system load plus what the battery wants to charge, against what the charger can deliver.</p>
-      <ul class="checks">
-        <li>Flags a brick pegged at its limit.</li>
-        <li>Flags a battery that drains while plugged in.</li>
-        <li>Suggests a wattage that would remove the bottleneck.</li>
-        <li>Remembers every charger you have used, with peak load and average efficiency for each.</li>
+  <section class="section" id="features" aria-labelledby="popover-title">
+    <div class="container split">
+      <div class="prose">
+        <h2 id="popover-title">The whole power path, one click away</h2>
+        <p>Click the menu bar readout for a popover that shows where every watt is going. Charger, Mac and battery are joined by pipes whose thickness follows the watts, in the real direction of flow, the way a hybrid car shows its energy.</p>
+        <ul class="checklist">
+          <li><strong>Power flow.</strong> Battery to Mac when unplugged, charger to Mac and battery when plugged in. Powered accessories branch off the Mac.</li>
+          <li><strong>Battery tank.</strong> The level is the charge; bubbles rise while charging and drops fall while draining.</li>
+          <li><strong>Charger check.</strong> A plain verdict, a five minute chart, then grouped details for charger, battery and Mac.</li>
+          <li><strong>Reduce Motion aware.</strong> With it on, animations hold still and arrows show direction.</li>
+        </ul>
+      </div>
+      <figure class="popover-fig">
+        <img class="shot" src="images/popover-crop.jpg" width="720" height="1692" loading="lazy"
+             alt="The Wattsup menu bar popover: battery at 100 percent, a power flow from a 22.8 W charger to the Mac, a charger check stating the charger has headroom at 33 percent of its 70 W limit, a power chart, and details for charger efficiency, battery health, temperature and energy mode.">
+      </figure>
+    </div>
+  </section>
+
+  <section class="section" id="charger-check" aria-labelledby="check-title">
+    <div class="container">
+      <div class="split reverse">
+        <div class="prose">
+          <h2 id="check-title">Know whether the charger or the cable is the bottleneck</h2>
+          <p>Wattsup compares what your Mac would draw, its own load plus the charge power the battery is requesting, with what the charger's active USB-C Power Delivery profile can supply. After about 30 seconds on a charger it gives one of three verdicts.</p>
+          <dl class="verdicts">
+            <div><dt>Charger is the bottleneck</dt><dd>It runs at 90% or more of its limit while the Mac wants more. Wattsup suggests the smallest common size with 10% headroom.</dd></div>
+            <div><dt>Charger can't keep up</dt><dd>The battery drains while plugged in.</dd></div>
+            <div><dt>Charger has headroom</dt><dd>It keeps up, and may note that a lighter charger would also do.</dd></div>
+          </dl>
+          <p style="margin-top:20px">When every profile stops at 3 A, Wattsup tells you to check the cable: a 100 W charger on a basic cable looks exactly like a 60 W one, and a 5 A cable unlocks the rest.</p>
+        </div>
+        <figure>
+          <img class="shot" src="images/charger-check.jpg" width="720" height="400" loading="lazy"
+               alt="The charger check panel: Charger has headroom. Peak load 31 percent of its 70 W limit. Notes that macOS has paused charging with reason code 0x400001, and that a lighter 30 W charger would also keep up.">
+          <figcaption>Advisories appear under the verdict, including the raw reason code when macOS pauses or slows charging.</figcaption>
+        </figure>
+      </div>
+
+      <div class="report">
+        <h3>Charger report card</h3>
+        <p>Every charger you use is graded from measured samples only. Each check stays ungraded until the load it needs has actually happened, and the overall grade is the weakest check.</p>
+        <ul class="report-grid">
+          <li><h3>Voltage under load</h3><p>How far the bus voltage sags as the charger works harder.</p></li>
+          <li><h3>Cable resistance</h3><p>Derived from how voltage falls as current rises, which separates the cable from the charger.</p></li>
+          <li><h3>Delivers its rating</h3><p>Whether it reached its limit when the Mac asked for more.</p></li>
+          <li><h3>Connection</h3><p>Drop outs: brief disconnects while plugged in, often a worn cable or loose port.</p></li>
+          <li><h3>Heat</h3><p>Whether macOS slowed charging because of heat.</p></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="menu-bar" aria-labelledby="menubar-title">
+    <div class="container split">
+      <div class="prose">
+        <h2 id="menubar-title">A readout that fits how you work</h2>
+        <p>The menu bar shows live numbers in an outlined capsule, colored by meaning: charger input blue, Mac use purple, charging green, draining pink. Hover any number for a tooltip that names it.</p>
+        <p>Choose from 14 readings, including power in or out, voltage, current, Mac uses, battery power, from the wall, charger loss, charger load, battery percent, time, temperature and health. Reorder them, stack them on two rows, or turn color and outline off.</p>
+        <figure class="capsules">
+          <div class="capsule dark"><img src="images/menubar-dark.png" width="428" height="60" loading="lazy" alt="Menu bar readout in dark mode: 38.1 W from the wall, 37% charger load, 29.9 W Mac uses, 100% battery."></div>
+          <div class="capsule light"><img src="images/menubar-light.png" width="428" height="60" loading="lazy" alt="The same readout in light mode."></div>
+          <figcaption>The default readout: from the wall, charger load, Mac uses and battery percent.</figcaption>
+        </figure>
+      </div>
+      <figure class="settings-fig">
+        <img class="shot" src="images/settings-crop.jpg" width="960" height="1343" loading="lazy"
+             alt="Wattsup Settings: a live preview of the menu bar readout, layout, color and outline options, icon choice, and a list of readings with checkboxes and arrows to reorder them.">
+      </figure>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="more-title">
+    <div class="container">
+      <div class="section-head">
+        <h2 id="more-title">Built for people who want the real numbers</h2>
+        <p>The dashboard puts everything in one window, far beyond what the system battery settings show.</p>
+      </div>
+      <ul class="grid">
+        <li>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 16V4M3 16h14"/><path d="m6 12 3-4 3 2 4-5"/></svg>
+          <h3>History up to 7 days</h3>
+          <p>Power, volts and amps, charge and temperature over 5, 15 or 60 minutes, 24 hours or 7 days. Minute averages are kept for 30 days.</p>
+        </li>
+        <li>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3a7 7 0 1 0 7 7"/><path d="M10 10l4.5-4.5"/><path d="M14 3h3v3"/></svg>
+          <h3>Charger efficiency grade</h3>
+          <p>Delivered watts over wall watts, graded Excellent at 94% or more, then Good, Fair and Poor. Not rated under 10 W.</p>
+        </li>
+        <li>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3v4M13 3v4M5 7h10v3a5 5 0 0 1-10 0V7ZM10 15v2"/></svg>
+          <h3>Power Delivery profiles</h3>
+          <p>Every USB-C profile the charger offers and which one is active, plus live input voltage and current.</p>
+        </li>
+        <li>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="13" height="8" rx="1.5"/><path d="M17.5 8.5v3M5.5 9v2M8.5 9v2M11.5 9v2"/></svg>
+          <h3>Battery detail</h3>
+          <p>Capacity against design, cycle count, temperature, per cell voltages and imbalance.</p>
+        </li>
+        <li>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="8" height="15" rx="2"/><path d="M9 15h2"/></svg>
+          <h3>Powering accessories</h3>
+          <p>USB devices the Mac is powering, such as an iPhone, with the power macOS allocated to each. These are ceilings, not live readings.</p>
+        </li>
+        <li>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 2.5 4.5 11H10l-1 6.5 6.5-8.5H10l1-6.5Z"/></svg>
+          <h3>Energy mode control</h3>
+          <p>See and switch Low Power, Automatic or High Power, where the Mac offers it, separately for battery and charger.</p>
+        </li>
+        <li>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h12M4 10h12M4 16h8"/></svg>
+          <h3>Chargers you've used</h3>
+          <p>Every charger you plug in is remembered with its limit, peak load, quality grade and average efficiency.</p>
+        </li>
+        <li>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v3M10 14v3M3 10h3M14 10h3"/><circle cx="10" cy="10" r="4"/></svg>
+          <h3>Wall draw and loss</h3>
+          <p>Estimated power from the wall and the watts the charger turns into heat, from macOS's own loss estimate.</p>
+        </li>
+        <li>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="3.5" width="15" height="4" rx="1"/><path d="M5 11h10M5 14.5h6"/></svg>
+          <h3>Replaces the battery icon</h3>
+          <p>Settings links straight to the macOS Menu Bar settings, so you can hide the built in battery icon.</p>
+        </li>
       </ul>
     </div>
-    <div class="card verdict" role="group" aria-label="Charger check verdict mockup">
-      <div class="vhead"><strong>45 W USB-C brick</strong><span class="tag-warn">Bottleneck</span></div>
-      <div class="barlab"><span>Charger load</span><span class="num">43.0 W of 45 W</span></div>
-      <div class="bar" role="img" aria-label="Charger at 96 percent of its limit"><i></i></div>
-      <div class="bars">
-        <div class="barlab"><span>Mac is asking for</span><span class="num">about 62 W</span></div>
-        <div class="seg" role="img" aria-label="System 15.9 watts plus battery request 46 watts">
-          <i style="width:26%;background:var(--system)"></i><i style="width:74%;background:var(--charging)"></i>
-        </div>
-        <div class="barlab"><span class="c-sys">System 15.9 W</span><span class="c-bat">Battery wants the rest</span></div>
+  </section>
+
+  <section class="section" id="privacy" aria-labelledby="privacy-title">
+    <div class="container split top">
+      <div class="prose">
+        <h2 id="privacy-title">Private by design, verifiable by anyone</h2>
+        <p>Wattsup reads Apple's own battery and power telemetry on your machine, without admin rights. Your readings never leave your Mac, and the source is public so you can confirm it.</p>
+        <p>Updates are checked once a day against GitHub releases. An update installs only after you agree, and only after Wattsup verifies the download is notarized by Apple and signed by the same developer.</p>
       </div>
-      <p class="msg">Charger at 96% of its limit. A 70 W or larger charger would charge faster.</p>
-      <table class="chargers">
-        <caption>Chargers you have used</caption>
-        <thead><tr><th scope="col">Charger</th><th scope="col">Peak load</th></tr></thead>
-        <tbody><tr><td>45 W USB-C brick</td><td>43.0 W</td></tr></tbody>
-      </table>
+      <ul class="facts">
+        <li>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="m5 5 10 10"/></svg>
+          <div><strong>No data out</strong><span>Readings never leave the Mac. There is no account and no analytics.</span></div>
+        </li>
+        <li>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 10a6 6 0 1 1-1.8-4.3M16 3.5v3h-3"/></svg>
+          <div><strong>One network request</strong><span>A daily update check, on by default. Turn it off from the gear menu or Settings.</span></div>
+        </li>
+        <li>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2.5 4 5v4.5c0 3.8 2.6 6.9 6 8 3.4-1.1 6-4.2 6-8V5l-6-2.5Z"/><path d="m7.5 10 1.8 1.8L12.8 8.3"/></svg>
+          <div><strong>Verified updates</strong><span>Checked by Gatekeeper and against the expected signing identity before install.</span></div>
+        </li>
+        <li>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 2.5h7l3 3v12H5z"/><path d="M8 9h4M8 12h4"/></svg>
+          <div><strong>Local logs</strong><span>Kept in <code>~/Library/Logs/Wattsup</code>, yours to share only if something breaks.</span></div>
+        </li>
+      </ul>
     </div>
-  </div>
-</section>
+  </section>
 
-<section id="efficiency">
-  <div class="wrap">
-    <p class="eyebrow">Efficiency and cable</p>
-    <h2>Is it the brick, or the cable?</h2>
-    <p class="lede">Two quick checks for the charger you have in hand, and the cable you plugged it in with.</p>
-    <div class="two">
-      <div>
-        <div class="card verdict" role="group" aria-label="Charger efficiency rating mockup">
-          <div class="vhead"><strong>70 W USB-C charger</strong><span class="tag-ok">Excellent</span></div>
-          <div class="big">97%</div>
-          <p class="lost">0.9 W lost as heat</p>
-          <div class="pd" role="list" aria-label="Efficiency grades">
-            <span role="listitem">Poor, below 85%</span><span role="listitem">Fair, 85%+</span><span role="listitem">Good, 90%+</span><span role="listitem" class="on">Excellent, 94%+</span>
-          </div>
-          <table class="chargers">
-            <caption>Chargers you have used</caption>
-            <thead><tr><th scope="col">Charger</th><th scope="col">Avg efficiency</th></tr></thead>
-            <tbody><tr><td>70 W USB-C charger</td><td>97%</td></tr></tbody>
-          </table>
-        </div>
-        <h3>Charger efficiency</h3>
-        <p class="t">Watts delivered divided by watts from the wall, graded Excellent at 94% and up, Good at 90%, Fair at 85%, Poor below that. Under 10 W it is not rated. Wattsup remembers the average efficiency of each charger in Chargers you have used.</p>
+  <section class="section" id="download" aria-labelledby="install-title">
+    <div class="container split top">
+      <div class="prose">
+        <h2 id="install-title">Install in about two minutes</h2>
+        <ol class="steps">
+          <li><span><strong>Download the DMG</strong> from the latest GitHub release.</span></li>
+          <li><span><strong>Drag Wattsup into Applications</strong> and open it. It runs from the menu bar.</span></li>
+          <li><span><strong>Pick your readings</strong> in Settings, from the gear menu in the popover.</span></li>
+        </ol>
       </div>
-      <div>
-        <div class="card verdict" role="group" aria-label="Cable check mockup">
-          <div class="vhead"><strong>Best profile offered</strong><span class="tag-warn">Cable check</span></div>
-          <div class="pd" role="list" aria-label="Best Power Delivery profile"><span role="listitem" class="on">20V 3A, 60 W</span></div>
-          <p class="msg">The best profile stops at 20 V and 3 A. Your cable is likely the limit. A 5 A cable rated 100 W or 240 W unlocks more.</p>
+      <div class="install-card">
+        <h3>Wattsup for macOS</h3>
+        <dl>
+          <div><dt>Requires</dt><dd>macOS 14 or later</dd></div>
+          <div><dt>Hardware</dt><dd>Apple silicon MacBook</dd></div>
+          <div><dt>License</dt><dd>MIT, free</dd></div>
+          <div><dt>Homebrew</dt><dd>Coming soon</dd></div>
+        </dl>
+        <div class="actions">
+          <a class="btn btn-primary" href="https://github.com/goriparthi/wattsup/releases/latest">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v10M5.5 8.5 10 13l4.5-4.5M4 16.5h12"/></svg>
+            Download DMG
+          </a>
+          <a class="btn btn-secondary" href="https://github.com/goriparthi/wattsup/releases">All releases</a>
         </div>
-        <h3>Cable check</h3>
-        <p class="t">When a charger's best profile stops at exactly 20 V and 3 A (60 W), Wattsup flags that the cable is likely the limit. Handy when you travel and pack one cable for everything.</p>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<section id="dashboard">
-  <div class="wrap">
-    <p class="eyebrow">Dashboard</p>
-    <h2>Far deeper than the battery settings.</h2>
-    <p class="lede">A full window for people who want to see what the power system is doing, and why.</p>
-    <div class="grid">
-      <article class="card feat"><h3>Power over time</h3><p>Charts of input, system and battery power, plus voltage and current.</p><span class="num">+27.2 W into battery</span></article>
-      <article class="card feat"><h3>USB-C Power Delivery</h3><p>Every profile the charger offers, and which one is active.</p><span class="num">20 V at 2.25 A (45 W)</span></article>
-      <article class="card feat"><h3>Live input</h3><p>Input voltage and current as they happen, not a rounded guess.</p><span class="num">19.63 V, 2.19 A</span></article>
-      <article class="card feat"><h3>Adapter loss</h3><p>Conversion loss and estimated wall draw.</p><span class="num">1.2 W loss, 44.2 W wall</span></article>
-      <article class="card feat"><h3>Battery health</h3><p>Capacity against design, cycle count and temperature.</p><span class="num">93.9%, 245 of 1000 cycles</span></article>
-      <article class="card feat"><h3>Cells and charge current</h3><p>Per-cell voltages and imbalance, the charge current the battery is requesting, and why charging is slow or paused.</p><span class="num">4.264 / 4.259 / 4.265 V</span></article>
+  <section class="section" id="faq" aria-labelledby="faq-title">
+    <div class="container">
+      <div class="section-head"><h2 id="faq-title">Frequently asked questions</h2></div>
+      <div class="faq">
+        <details>
+          <summary>Is Wattsup free?</summary>
+          <p>Yes. It is free and open source under the MIT license, with no paid tier, account or trial.</p>
+        </details>
+        <details>
+          <summary>Does it need admin rights?</summary>
+          <p>Not to read anything. Readings come from the Mac's own battery and power registry, which any user can read. The only password prompt is when you change energy mode, because macOS only lets an administrator change power settings.</p>
+        </details>
+        <details>
+          <summary>Why does it tell me to check the cable?</summary>
+          <p>A USB-C charger only offers more than 3 A after it detects a 5 A cable, so a 100 W charger on a basic cable looks exactly like a 60 W charger. When every profile stops at 3 A and your charger is rated above 60 W, a 5 A cable rated 100 W or 240 W unlocks the rest. If a charger that reports its own name was seen delivering more on another cable, Wattsup says plainly that the cable is the bottleneck.</p>
+        </details>
+        <details>
+          <summary>Does it send data anywhere?</summary>
+          <p>No. Readings never leave your Mac. The only network request is a daily check of GitHub releases for an update, which you can turn off from the gear menu or Settings.</p>
+        </details>
+        <details>
+          <summary>Which Macs are supported?</summary>
+          <p>Apple silicon MacBooks running macOS 14 or later. High Power mode appears only on Macs that offer it.</p>
+        </details>
+        <details>
+          <summary>How do updates work?</summary>
+          <p>Once a day Wattsup checks GitHub releases. When a new version is available it asks first, then downloads it and installs it only if it passes Gatekeeper and is signed by the expected developer.</p>
+        </details>
+        <details>
+          <summary>Are the accessory numbers live?</summary>
+          <p>No. macOS reports the power it allocated to each USB device, so these are ceilings. Whatever a device actually draws is already part of Mac uses.</p>
+        </details>
+      </div>
     </div>
-    <div class="pd" role="list" aria-label="Power Delivery profiles offered by the example charger">
-      <span role="listitem">5V 3A</span><span role="listitem">9V 3A</span><span role="listitem">12V 3A</span><span role="listitem">15V 3A</span><span role="listitem" class="on">20V 2.25A, active</span>
-    </div>
-    <p class="cap">Profiles offered by the 45 W example brick.</p>
-  </div>
-</section>
-
-<section id="privacy" style="background:var(--surface);border-block:1px solid var(--line)">
-  <div class="wrap">
-    <p class="eyebrow">Privacy</p>
-    <h2>It only listens to your Mac.</h2>
-    <p class="lede">Wattsup reads Apple's own battery and power telemetry on your machine. Your readings never leave it, and the source is right there to check.</p>
-    <div class="facts" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
-      <div class="card fact"><b>No data out</b><span>Readings never leave your Mac. The only request is a daily update check, and you can turn it off.</span></div>
-      <div class="card fact"><b>No account</b><span>Nothing to sign up for.</span></div>
-      <div class="card fact"><b>Admin on request</b><span>The only password prompt is changing Energy Mode, because macOS requires it.</span></div>
-      <div class="card fact"><b>No tracking</b><span>No analytics of any kind.</span></div>
-      <div class="card fact"><b>Local logs</b><span>Logs stay on your Mac in <code style="overflow-wrap:anywhere">~/Library/Logs/Wattsup</code>. They are only for you to share if something breaks.</span></div>
-    </div>
-  </div>
-</section>
-
-<section id="install">
-  <div class="wrap">
-    <p class="eyebrow">Install</p>
-    <h2>Two minutes, start to finish.</h2>
-    <ol class="steps">
-      <li>Download the DMG from the releases page. The first release is 0.0.1.</li>
-      <li>Drag Wattsup into Applications and open it.</li>
-      <li>Pick your menu bar numbers.</li>
-    </ol>
-    <div class="btns">
-      <a class="btn primary" href="https://github.com/goriparthi/wattsup/releases">Download the DMG</a>
-      <a class="btn" href="https://github.com/goriparthi/wattsup">Source on GitHub</a>
-    </div>
-    <p class="small">Requires macOS 14 or later on an Apple silicon MacBook. Homebrew: coming soon.</p>
-    <pre aria-label="Homebrew command, coming soon"><code># Homebrew, coming soon</code></pre>
-  </div>
-</section>
+  </section>
 </main>
 
-<footer>
-  <div class="wrap">
-    <span>Wattsup is free software, released under the MIT license.</span>
-    <span><a href="https://github.com/goriparthi/wattsup">github.com/goriparthi/wattsup</a></span>
+<footer class="site-footer">
+  <div class="container footer-row">
+    <div class="footer-brand">
+      <picture>
+        <source srcset="logo-dark.svg" media="(prefers-color-scheme: dark)">
+        <img src="logo-light.svg" alt="Wattsup" width="122" height="24" loading="lazy">
+      </picture>
+      <p>See watts up with your Mac. Free software under the MIT license.</p>
+    </div>
+    <nav aria-label="Footer">
+      <ul class="footer-links">
+        <li><a href="https://github.com/goriparthi/wattsup">GitHub</a></li>
+        <li><a href="https://github.com/goriparthi/wattsup/releases">Releases</a></li>
+        <li><a href="https://github.com/goriparthi/wattsup#readme">Docs</a></li>
+        <li><a href="https://github.com/goriparthi/wattsup/blob/main/docs/USER-GUIDE.md">User guide</a></li>
+        <li><a href="https://github.com/goriparthi/wattsup/blob/main/LICENSE">License (MIT)</a></li>
+      </ul>
+    </nav>
   </div>
 </footer>
 </body>
