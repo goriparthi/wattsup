@@ -184,7 +184,12 @@ struct SeriesChart: View {
         .chartXAxis {
             AxisMarks(values: .stride(by: .minute, count: strideMinutes)) { _ in
                 AxisGridLine()
-                AxisValueLabel(format: .dateTime.hour().minute())
+                // Week long ranges label days; shorter ones label the time
+                if strideMinutes >= 1440 {
+                    AxisValueLabel(format: .dateTime.weekday(.abbreviated).day())
+                } else {
+                    AxisValueLabel(format: .dateTime.hour().minute())
+                }
             }
         }
         .frame(height: height)

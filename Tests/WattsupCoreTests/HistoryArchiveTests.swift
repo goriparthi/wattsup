@@ -1,0 +1,39 @@
+import XCTest
+@testable import WattsupCore
+
+final class HistoryArchiveTests: XCTestCase {
+    func sample(at t: Double, input: Int) -> PowerSample {
+        var s = PowerSample(Fixture.snapshot(Fixture.charging(input: input), at: 0))
+        s.date = Date(timeIntervalSince1970: t)
+        return s
+    }
+
+    func testAggregatesOneMinute() throws {
+        var agg = MinuteAggregator()
+        XCTAssertNil(agg.add(sample(at: 120, input: 40000)))
+        XCTAssertNil(agg.add(sample(at: 150, input: 20000)))
+        let minute = try XCTUnwrap(agg.add(sample(at: 180, input: 10000)), "a new minute closes the old one")
+        XCTAssertEqual(minute.date, Date(timeIntervalSince1970: 120))
+        XCTAssertEqual(minute.inputWatts, 30, accuracy: 0.001)
+        XCTAssertEqual(minute.seconds, 32, accuracy: 0.001)
+        XCTAssertEqual(try XCTUnwrap(agg.pending()).inputWatts, 10, accuracy: 0.001)
+    }
+
+    func testRoundTripsAndSkipsTornLines() throws {
+        let a = try XCTUnwrap(HistoryArchive.encode(sample(at: 60, input: 30000)))
+        var data = a
+        data.append(Data("{\"torn".utf8))
+        data.append(0x0A)
+        data.append(try XCTUnwrap(HistoryArchive.encode(sample(at: 120, input: 20000))))
+        let back = HistoryArchive.decode(data)
+        XCTAssertEqual(back.count, 2)
+        XCTAssertEqual(back[0].inputWatts, 30, accuracy: 0.001)
+    }
+
+    func testDayFilesAndExpiry() {
+        let now = Date(timeIntervalSince1970: 86400 * 40)
+        XCTAssertEqual(HistoryArchive.fileName(for: now), "1970-02-10.jsonl")
+        let names = ["1970-01-01.jsonl", "1970-02-09.jsonl", "notes.txt"]
+        XCTAssertEqual(HistoryArchive.expired(names, now: now, days: 30), ["1970-01-01.jsonl"])
+    }
+}

@@ -86,7 +86,9 @@ struct DashboardView: View {
     }
 
     private var charts: some View {
-        let samples = monitor.history.recent(range.seconds).thinned(to: 400)
+        let samples = range.usesArchive
+            ? monitor.archive.filter { $0.date >= Date().addingTimeInterval(-range.seconds) }.thinned(to: 400)
+            : monitor.history.recent(range.seconds).thinned(to: 400)
         return Card(title: "History", symbol: "chart.xyaxis.line") {
             HStack {
                 Picker("Chart", selection: $mode) {
@@ -101,7 +103,7 @@ struct DashboardView: View {
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
-                .frame(width: 200)
+                .frame(width: 320)
             }
             switch mode {
             case .power:
@@ -124,7 +126,7 @@ struct DashboardView: View {
                                                 points: samples.compactMap { s in s.temperatureC.map { (s.date, $0) } })],
                             unit: "°C", height: 120, strideMinutes: range.stride)
             }
-            Text("Volts and amps follow the charger input while plugged in and the battery pack on battery. History is kept while Wattsup runs.")
+            Text("Volts and amps follow the charger input while plugged in and the battery pack on battery. The 24 h and 7 d views use one averaged point per minute, kept for 30 days.")
                 .font(.caption)
                 .foregroundStyle(Theme.secondaryText)
         }
@@ -137,11 +139,27 @@ enum ChartMode: String, CaseIterable, Identifiable {
 }
 
 enum ChartRange: Int, CaseIterable, Identifiable {
-    case five = 5, fifteen = 15, sixty = 60
+    case five = 5, fifteen = 15, sixty = 60, day = 1440, week = 10080
     var id: Int { rawValue }
-    var title: String { "\(rawValue) min" }
+    var title: String {
+        switch self {
+        case .day: return "24 h"
+        case .week: return "7 d"
+        default: return "\(rawValue) min"
+        }
+    }
     var seconds: TimeInterval { TimeInterval(rawValue * 60) }
-    var stride: Int { self == .five ? 1 : self == .fifteen ? 3 : 10 }
+    var stride: Int {
+        switch self {
+        case .five: return 1
+        case .fifteen: return 3
+        case .sixty: return 10
+        case .day: return 180
+        case .week: return 1440
+        }
+    }
+    /// Ranges beyond the live hour read the stored minutes.
+    var usesArchive: Bool { rawValue > 60 }
 }
 
 struct HeroStat: View {

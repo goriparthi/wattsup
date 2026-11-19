@@ -16,6 +16,8 @@ final class PowerMonitor {
     private(set) var assessment: ChargerAssessment?
     private(set) var chargers: ChargerLog
     private(set) var quality: ChargerQuality?
+    /// Stored minutes from the last week, for the 24 h and 7 d charts and energy totals.
+    private(set) var archive: [PowerSample] = []
 
     @ObservationIgnored var onUpdate: (() -> Void)?
     let energy = EnergyModeController()
@@ -26,12 +28,16 @@ final class PowerMonitor {
     @ObservationIgnored private var peripherals: [Peripheral] = []
     @ObservationIgnored private var lastDisconnect: (fingerprint: String, at: Date)?
     @ObservationIgnored private var ticksSinceQuality = 0
+    @ObservationIgnored private let historyStore = HistoryStore()
+    @ObservationIgnored private var minutes = MinuteAggregator()
     private static let peripheralScanEvery = 3
     /// Starts due, so the first reading already includes attached devices
     @ObservationIgnored private var ticksSincePeripheralScan = PowerMonitor.peripheralScanEvery
 
     init() {
         chargers = store.load()
+        archive = historyStore.load(days: 7)
+        historyStore.prune()
     }
 
     func start(interval: TimeInterval = 2) {
@@ -69,6 +75,12 @@ final class PowerMonitor {
             ticksSincePeripheralScan += 1
             s.peripherals = peripherals
             history.append(s)
+            if let minute = minutes.add(PowerSample(s)) {
+                historyStore.append(minute)
+                archive.append(minute)
+                let cutoff = s.date.addingTimeInterval(-7 * 86400)
+                if let first = archive.firstIndex(where: { $0.date >= cutoff }), first > 0 { archive.removeFirst(first) }
+            }
             let a = ChargerAssessment(snapshot: s, history: history, known: chargers.records)
             let settled = a.verdict != .measuring && a.verdict != .unplugged
             chargers.record(s, verdict: settled ? a.headline : nil)
@@ -140,6 +152,7 @@ final class PowerMonitor {
     }
 
     func flush() {
+        if let partial = minutes.pending() { historyStore.append(partial) }
         store.save(chargers)
     }
 
