@@ -26,7 +26,9 @@ public struct ChargerAssessment: Equatable, Sendable {
         return standardSizes.first { Double($0) >= target } ?? standardSizes.last!
     }
 
-    public init(snapshot s: PowerSnapshot, history: PowerHistory, window: TimeInterval = 600) {
+    /// `known` is the charger log, used to recognize a named charger seen on a better cable.
+    public init(snapshot s: PowerSnapshot, history: PowerHistory, known: [ChargerRecord] = [],
+                window: TimeInterval = 600) {
         verdict = .measuring
         headline = ""
         detail = ""
@@ -52,7 +54,8 @@ public struct ChargerAssessment: Equatable, Sendable {
             peakLoad = samples.map { $0.inputWatts / ceiling }.max()
         }
 
-        advisories = Self.advisories(for: s, adapter: adapter, peakDemand: peakDemand)
+        let cable = Self.cableFinding(adapter, known: known)
+        advisories = Self.advisories(for: s, adapter: adapter, peakDemand: peakDemand, cable: cable)
 
         guard let ceiling, ceiling > 0, samples.count >= Self.minimumSamples else {
             headline = "Checking this charger"
@@ -75,10 +78,22 @@ public struct ChargerAssessment: Equatable, Sendable {
             verdict = .bottleneck
             let size = Self.suggestedSize(forDemand: peakDemand)
             suggestedWatts = size
-            headline = "Charger is the bottleneck"
-            detail = "Running at \(Units.percent(medianLoad)) of its \(ceilingText) limit while your Mac "
-                + "asks for about \(Units.watts(peakDemand, digits: 0)). A \(size) W or larger charger "
-                + "would charge faster."
+            let running = "Running at \(Units.percent(medianLoad)) of its \(ceilingText) limit while your Mac "
+                + "asks for about \(Units.watts(peakDemand, digits: 0))."
+            switch cable {
+            case .provenCable(let seen):
+                headline = "The cable is the bottleneck"
+                detail = running + " This charger delivered \(Units.watts(seen, digits: 0)) on another cable, "
+                    + "so use a 5 A cable rated 100 W or 240 W."
+            case .possibleCable:
+                headline = "Power is capped: check the cable"
+                detail = running + " If your charger is rated above 60 W, the cable is likely the limit; "
+                    + "a 5 A cable rated 100 W or 240 W unlocks more. If it is a 60 W charger, "
+                    + "a \(size) W or larger one would charge faster."
+            case .none:
+                headline = "Charger is the bottleneck"
+                detail = running + " A \(size) W or larger charger would charge faster."
+            }
         } else {
             verdict = .headroom
             headline = "Charger has headroom"
@@ -91,15 +106,44 @@ public struct ChargerAssessment: Equatable, Sendable {
         }
     }
 
-    static func advisories(for s: PowerSnapshot, adapter: AdapterInfo, peakDemand: Double) -> [String] {
+    /// What the charger log and the profile menu say about the cable.
+    enum CableFinding: Equatable {
+        case none
+        /// Every profile stops at 3 A: a 3 A cable or a 60 W charger, indistinguishable live.
+        case possibleCable
+        /// The same named charger offered more on another cable, so this cable is the limit.
+        case provenCable(seenWatts: Double)
+    }
+
+    static func cableFinding(_ adapter: AdapterInfo, known: [ChargerRecord]) -> CableFinding {
+        guard looksCableCapped(adapter) else { return .none }
+        // Only a charger that reports its own name can be recognized across cables
+        if let name = adapter.name {
+            let best = known.filter { $0.title == name }
+                .compactMap { $0.profiles.max { $0.watts < $1.watts }?.watts }
+                .max() ?? 0
+            if best > 61 { return .provenCable(seenWatts: best) }
+        }
+        return .possibleCable
+    }
+
+    static func advisories(for s: PowerSnapshot, adapter: AdapterInfo, peakDemand: Double,
+                           cable: CableFinding = .none) -> [String] {
         var notes: [String] = []
         if let active = adapter.activeProfile, let best = adapter.bestProfile, best.watts > active.watts + 1 {
             notes.append("Using the \(Units.watts(active.watts, digits: 0)) profile although the charger "
                 + "offers \(Units.watts(best.watts, digits: 0)). A different cable or port may unlock it.")
         }
-        if Self.looksCableCapped(adapter) {
-            notes.append("Capped at 60 W: every profile tops out at 3 A, the most a standard USB-C cable "
-                + "carries. If the charger is rated higher, a 5 A cable rated 100 W or 240 W unlocks more.")
+        switch cable {
+        case .provenCable(let seen):
+            notes.append("Check the cable: this charger offered \(Units.watts(seen, digits: 0)) on another cable, "
+                + "but only 60 W on this one.")
+        case .possibleCable:
+            notes.append("Capped at 60 W. Every profile stops at 3 A, the most a standard USB-C cable carries. "
+                + "If your charger is rated higher, check the cable: a 5 A cable rated 100 W or 240 W unlocks "
+                + "the rest. A 60 W charger stops here on any cable.")
+        case .none:
+            break
         }
         if let amps = adapter.negotiatedAmps, let active = adapter.activeProfile, amps < active.amps - 0.1 {
             notes.append("Current is capped at \(Units.amps(amps)) below the profile's "

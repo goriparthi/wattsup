@@ -53,9 +53,11 @@ charger it says one of:
 
 Advisories appear under the verdict:
 
-- **Capped at 60 W**: every profile stops at 3 A. Chargers only offer more than 3 A after detecting
-  a 5 A cable, so this usually means the cable is the limit. A cable rated 100 W or 240 W unlocks
-  more if the charger is rated higher.
+- **Cable or charger?** A charger only offers more than 3 A after detecting a 5 A cable, so a
+  100 W charger on a basic cable looks exactly like a 60 W charger. When every profile stops at
+  3 A, Wattsup says **check the cable**: if your charger is rated above 60 W, a 5 A cable rated
+  100 W or 240 W unlocks the rest. If a charger that reports its own name (Apple's do) was seen
+  delivering more on another cable, it says plainly that **the cable is the bottleneck**.
 - The Mac picked a lower profile than the charger offers, or current is capped below the profile.
 - macOS paused or slowed charging, with its raw reason code (Apple does not document them).
 

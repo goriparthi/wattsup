@@ -66,7 +66,7 @@ final class PowerMonitor {
             ticksSincePeripheralScan += 1
             s.peripherals = peripherals
             history.append(s)
-            let a = ChargerAssessment(snapshot: s, history: history)
+            let a = ChargerAssessment(snapshot: s, history: history, known: chargers.records)
             let settled = a.verdict != .measuring && a.verdict != .unplugged
             chargers.record(s, verdict: settled ? a.headline : nil)
             logTransitions(from: snapshot, to: s, verdict: a)

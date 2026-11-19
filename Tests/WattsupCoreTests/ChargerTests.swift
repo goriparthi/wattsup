@@ -99,3 +99,46 @@ final class ChargerTests: XCTestCase {
         XCTAssertEqual(log.records.count, 1, "battery readings are not chargers")
     }
 }
+
+final class CableFindingTests: XCTestCase {
+    /// A pegged charger whose profiles all stop at 20 V 3 A
+    func capped(name: String? = nil) -> [String: Any] {
+        var d = Fixture.charging(input: 58500, battery: 2124, load: 30000)
+        var adapter: [String: Any] = [
+            "Watts": 60, "AdapterVoltage": 20000, "Current": 3000, "UsbHvcHvcIndex": 3,
+            "UsbHvcMenu": [
+                ["Index": 0, "MaxCurrent": 3000, "MaxVoltage": 5000],
+                ["Index": 3, "MaxCurrent": 3000, "MaxVoltage": 20000],
+            ],
+        ]
+        if let name { adapter["Name"] = name }
+        d["AdapterDetails"] = adapter
+        return d
+    }
+
+    func testUnnamedCappedChargerSaysCheckTheCable() {
+        let d = capped()
+        let a = ChargerAssessment(snapshot: Fixture.snapshot(d, at: 1000), history: Fixture.history(d, count: 40))
+        XCTAssertEqual(a.verdict, .bottleneck)
+        XCTAssertEqual(a.headline, "Power is capped: check the cable")
+        XCTAssertTrue(a.detail.contains("cable is likely the limit"), a.detail)
+        XCTAssertTrue(a.advisories.contains { $0.contains("check the cable") }, "\(a.advisories)")
+    }
+
+    func testNamedChargerSeenAtHigherPowerProvesTheCable() {
+        let earlier = ChargerRecord(
+            fingerprint: "other cable", title: "96W USB-C Power Adapter", ratedWatts: 96, ceilingWatts: 96,
+            profiles: [PDProfile(index: 0, volts: 20, amps: 4.8)], firstSeen: Date(), lastSeen: Date(),
+            secondsConnected: 60, peakInputWatts: 80, peakDemandWatts: 80, lastVerdict: nil)
+        let d = capped(name: "96W USB-C Power Adapter")
+        let a = ChargerAssessment(snapshot: Fixture.snapshot(d, at: 1000), history: Fixture.history(d, count: 40),
+                                  known: [earlier])
+        XCTAssertEqual(a.headline, "The cable is the bottleneck")
+        XCTAssertTrue(a.detail.contains("96 W on another cable"), a.detail)
+    }
+
+    func testUncappedChargerHasNoCableFinding() {
+        let d = Fixture.charging()
+        XCTAssertEqual(ChargerAssessment.cableFinding(Fixture.snapshot(d).adapter!, known: []), .none)
+    }
+}
