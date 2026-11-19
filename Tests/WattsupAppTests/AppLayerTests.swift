@@ -96,3 +96,22 @@ enum AppFixture {
                                "SystemCurrentIn": 2192, "AdapterEfficiencyLoss": 1183] as [String: Any],
     ]
 }
+
+@MainActor
+final class AppPresenceTests: XCTestCase {
+    func testRegularWhileAWindowIsOpenAccessoryAfter() async throws {
+        let app = NSApplication.shared
+        app.setActivationPolicy(.accessory)
+        let presence = AppPresence()
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 200, height: 100),
+                              styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        presence.track(window)
+        XCTAssertEqual(app.activationPolicy(), .regular, "shows in Cmd+Tab and the Dock while open")
+        XCTAssertNotNil(app.mainMenu?.item(withTitle: "Window") ?? app.mainMenu?.items.last)
+        window.close()
+        // The policy switches back on the next turn of the run loop
+        try await Task.sleep(nanoseconds: 200_000_000)
+        XCTAssertEqual(app.activationPolicy(), .accessory, "back to menu bar only once closed")
+    }
+}

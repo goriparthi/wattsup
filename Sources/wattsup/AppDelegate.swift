@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var welcomeWindow: NSWindow?
     private static let welcomedKey = "hasSeenWelcome"
     private let visibility = MenuBarVisibility()
+    private let presence = AppPresence()
     private lazy var alerts = AlertCenter(settings: settings)
     private var statusItem: NSStatusItem!
     private let popover = NSPopover()
@@ -48,6 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         observeSettings()
         updates.start()
         visibility.openDashboard = { [weak self] in self?.showDashboard() }
+        presence.openSettings = { [weak self] in self?.showSettings() }
         visibility.watch(statusItem)
 
         if CommandLine.arguments.contains("--dashboard") { showDashboard() }
@@ -111,8 +113,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.center()
             welcomeWindow = window
         }
-        NSApp.activate(ignoringOtherApps: true)
-        welcomeWindow?.makeKeyAndOrderFront(nil)
+        if let window = welcomeWindow { presence.track(window) }
     }
 
     func showSettings() {
@@ -126,8 +127,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.center()
             settingsWindow = window
         }
-        NSApp.activate(ignoringOtherApps: true)
-        settingsWindow?.makeKeyAndOrderFront(nil)
+        if let window = settingsWindow { presence.track(window) }
     }
 
     func showDashboard() {
@@ -144,7 +144,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.center()
             dashboard = window
         }
-        NSApp.activate(ignoringOtherApps: true)
-        dashboard?.makeKeyAndOrderFront(nil)
+        if let window = dashboard { presence.track(window) }
     }
 }
