@@ -38,7 +38,12 @@ struct Card<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(title).font(.headline)
+            Label {
+                Text(title)
+            } icon: {
+                Image(systemName: symbol).foregroundStyle(Theme.secondaryText)
+            }
+            .font(.headline)
             content
         }
         .padding(14)

@@ -45,7 +45,7 @@ struct PowerFlowView: View {
                               detail: s.energyMode.flatMap { $0 == .automatic ? nil : $0.title },
                               tint: Theme.system, active: true, ring: nil, layout: layout)
                     .position(layout.mac)
-                FlowNodeBadge(symbol: s.symbolName, title: "Battery \(s.percent)%",
+                FlowNodeBadge(symbol: s.batteryNodeSymbol, title: "Battery \(s.percent)%",
                               value: Units.watts(s.batteryWatts, signed: true),
                               detail: "\(Units.volts(s.batteryVolts)) · \(Units.amps(abs(s.busAmpsForBattery)))",
                               tint: batteryTint, active: abs(s.batteryWatts) > 0.05,
@@ -236,5 +236,16 @@ extension PowerSnapshot {
     /// Pack current that agrees with the battery watts shown, including right after unplugging.
     var busAmpsForBattery: Double {
         batteryVolts > 0 ? batteryWatts / batteryVolts : batteryAmps
+    }
+}
+
+extension PowerSnapshot {
+    /// The battery node always shows a battery, with a bolt only while charging.
+    var batteryNodeSymbol: String {
+        switch state {
+        case .charging: return "battery.100percent.bolt"
+        case .full, .held: return "battery.100percent"
+        case .discharging: return symbolName
+        }
     }
 }

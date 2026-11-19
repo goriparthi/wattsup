@@ -53,7 +53,7 @@ struct PopoverView: View {
     private func details(_ s: PowerSnapshot) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             if let adapter = s.adapter {
-                DetailGroup(title: "Charger") {
+                DetailGroup(title: "Charger", symbol: "powerplug.fill") {
                     StatRow(label: "Charger", value: adapter.title)
                     if let e = ChargerEfficiency(snapshot: s) {
                         StatRow(label: "Efficiency", value: e.summary, tint: Color(Brand.color(e.grade.tone)))
@@ -69,12 +69,12 @@ struct PopoverView: View {
                 }
                 Divider()
             }
-            DetailGroup(title: "Battery") {
+            DetailGroup(title: "Battery", symbol: "battery.75percent") {
                 StatRow(label: "Health", value: Units.percent(s.health, digits: 1))
                 StatRow(label: "Temperature", value: Units.celsius(s.temperatureC))
             }
             Divider()
-            DetailGroup(title: "Mac") {
+            DetailGroup(title: "Mac", symbol: "laptopcomputer") {
                 if !s.peripherals.isEmpty {
                     StatRow(label: "Powering", value: s.peripherals.map(\.name).joined(separator: ", ")
                             + ", up to " + Units.watts(s.peripherals.allocatedWatts, digits: 0), tint: Theme.system)
@@ -147,13 +147,17 @@ struct UnavailableView: View {
 
 private struct DetailGroup<Content: View>: View {
     let title: String
+    let symbol: String
     @ViewBuilder var content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.primary)
+            Label {
+                Text(title).foregroundStyle(.primary)
+            } icon: {
+                Image(systemName: symbol).foregroundStyle(Theme.secondaryText)
+            }
+            .font(.subheadline.weight(.semibold))
             content
         }
     }

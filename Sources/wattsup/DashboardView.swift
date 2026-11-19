@@ -72,15 +72,15 @@ struct DashboardView: View {
                 }
             }
             Spacer()
-            HeroStat(title: "Charger in", value: s.isExternalPower ? Units.watts(s.inputWatts) : "Unplugged",
+            HeroStat(title: "Charger in", symbol: "powerplug.fill", value: s.isExternalPower ? Units.watts(s.inputWatts) : "Unplugged",
                      detail: s.isExternalPower ? "\(Units.volts(s.inputVolts)) · \(Units.amps(s.inputAmps))" : "On battery",
                      tint: s.isExternalPower ? Theme.input : .secondary)
-            HeroStat(title: "Mac uses", value: Units.watts(s.systemWatts), detail: "System load", tint: Theme.system)
-            HeroStat(title: "Battery", value: Units.watts(s.batteryWatts, signed: true),
+            HeroStat(title: "Mac uses", symbol: "laptopcomputer", value: Units.watts(s.systemWatts), detail: "System load", tint: Theme.system)
+            HeroStat(title: "Battery", symbol: s.batteryNodeSymbol, value: Units.watts(s.batteryWatts, signed: true),
                      detail: "\(Units.volts(s.batteryVolts)) · \(Units.amps(s.batteryAmps))",
                      tint: Theme.battery(s.batteryWatts))
             if let wall = s.wallWatts {
-                HeroStat(title: "From the wall", value: Units.watts(wall), detail: "Estimated", tint: .secondary)
+                HeroStat(title: "From the wall", symbol: "poweroutlet.type.b.fill", value: Units.watts(wall), detail: "Estimated", tint: .secondary)
             }
         }
     }
@@ -164,13 +164,16 @@ enum ChartRange: Int, CaseIterable, Identifiable {
 
 struct HeroStat: View {
     let title: String
+    let symbol: String
     let value: String
     let detail: String
     let tint: Color
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(title).font(.caption).foregroundStyle(Theme.secondaryText)
+            Label(title, systemImage: symbol)
+                .font(.caption)
+                .foregroundStyle(Theme.secondaryText)
             Text(value)
                 .font(.title2.weight(.semibold))
                 .monospacedDigit()
