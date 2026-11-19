@@ -26,15 +26,17 @@ final class MenuBarVisibility {
     func check() {
         guard let window = item?.button?.window else { return }
         let visible = Self.isVisible(window)
-        if visible == !hidden && warned { return }
         let wasHidden = hidden
         hidden = !visible
+        guard hidden != wasHidden || !warned else { return }
         log.info("Menu bar readout \(visible ? "visible" : "hidden by macOS") at \(Int(window.frame.minX)),\(Int(window.frame.minY)) width \(Int(window.frame.width))")
         if hidden && !wasHidden && !warned { warn() }
     }
 
     static func isVisible(_ window: NSWindow) -> Bool {
-        guard window.occlusionState.contains(.visible), let screen = window.screen ?? NSScreen.main else { return false }
+        // Position only: macOS also reports menu bar items as occluded when switching spaces or
+        // in full screen apps, which is not hiding and caused false alerts
+        guard let screen = window.screen ?? NSScreen.main else { return false }
         return MenuBarGeometry.isVisible(item: window.frame, screen: screen.frame,
                                          leftOfNotch: screen.auxiliaryTopLeftArea,
                                          rightOfNotch: screen.auxiliaryTopRightArea)
