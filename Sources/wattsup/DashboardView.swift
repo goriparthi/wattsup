@@ -58,6 +58,7 @@ struct DashboardView: View {
                         if let t = s.thermals { ThermalsCard(thermals: t, batteryC: s.temperatureC) }
                     }
                     .fixedSize(horizontal: false, vertical: true)
+                    EnergyByAppCard(impact: monitor.impact)
                     ChargerHistoryCard(chargers: monitor.chargers.sorted,
                                        current: s.adapter?.fingerprint,
                                        forget: monitor.forgetCharger)
@@ -68,6 +69,8 @@ struct DashboardView: View {
             }
         }
         .frame(minWidth: 900, minHeight: 640)
+        .onAppear { monitor.impact.viewerAppeared() }
+        .onDisappear { monitor.impact.viewerDisappeared() }
         .background(Theme.canvas)
         .tint(Theme.accent)
     }
@@ -497,6 +500,45 @@ struct ThermalsCard: View {
             if let gpu = thermals.gpuC { StatRow(label: "GPU", value: Units.celsius(gpu)) }
             StatRow(label: "Battery", value: Units.celsius(batteryC))
             Text("Read from the System Management Controller. More watts means more heat, and the fans follow a few seconds later.")
+                .font(.caption)
+                .foregroundStyle(Theme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+/// The apps doing the most work right now, by Activity Monitor's energy impact score.
+struct EnergyByAppCard: View {
+    let impact: EnergyImpactMonitor
+
+    var body: some View {
+        Card(title: "Energy use by app", symbol: "chart.bar.xaxis") {
+            if impact.apps.isEmpty {
+                Text("Sampling…").foregroundStyle(Theme.secondaryText)
+            } else {
+                let top = impact.apps.first?.impact ?? 1
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 24), GridItem(.flexible())], alignment: .leading, spacing: 10) {
+                    ForEach(impact.apps) { app in
+                        HStack(spacing: 8) {
+                            if let path = app.bundlePath {
+                                Image(nsImage: NSWorkspace.shared.icon(forFile: path)).resizable().frame(width: 18, height: 18)
+                            } else {
+                                Image(systemName: "gearshape").frame(width: 18, height: 18).foregroundStyle(Theme.secondaryText)
+                            }
+                            VStack(alignment: .leading, spacing: 3) {
+                                HStack {
+                                    Text(app.name).lineLimit(1)
+                                    Spacer()
+                                    Text(String(format: "%.1f", app.impact)).monospacedDigit().foregroundStyle(Theme.secondaryText)
+                                }
+                                .font(.callout)
+                                LoadBarTinted(fraction: app.impact / max(top, 1), tint: Theme.system)
+                            }
+                        }
+                    }
+                }
+            }
+            Text("Energy impact as Activity Monitor scores it: a relative measure of how hard each app works the Mac, not watts. Helpers count toward their app.")
                 .font(.caption)
                 .foregroundStyle(Theme.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)

@@ -15,6 +15,22 @@ struct PopoverView: View {
     let actions: PopoverActions
 
     var body: some View {
+        // Scrolls only when taller than the screen allows, so small displays never clip the top
+        ViewThatFits(in: .vertical) {
+            content
+            ScrollView(.vertical) { content }
+        }
+        .frame(width: 360)
+        .frame(maxHeight: Self.maxHeight)
+        .onAppear { monitor.impact.viewerAppeared() }
+        .onDisappear { monitor.impact.viewerDisappeared() }
+    }
+
+    private static var maxHeight: CGFloat {
+        (NSScreen.main?.visibleFrame.height ?? 800) - 40
+    }
+
+    private var content: some View {
         VStack(alignment: .leading, spacing: 12) {
             if let s = monitor.snapshot {
                 header(s)
@@ -30,7 +46,6 @@ struct PopoverView: View {
             footer
         }
         .padding(14)
-        .frame(width: 360)
     }
 
     private func header(_ s: PowerSnapshot) -> some View {
@@ -80,6 +95,9 @@ struct PopoverView: View {
                         StatRow(label: "Fans", value: t.fans.map { "\(Int($0.rpm.rounded()).formatted())" }.joined(separator: " / ") + " rpm")
                     }
                     if let c = t.cpuC { StatRow(label: "Chip", value: Units.celsius(c)) }
+                }
+                if let busiest = monitor.impact.apps.first {
+                    StatRow(label: "Busiest app", value: busiest.name)
                 }
                 if !s.peripherals.isEmpty {
                     StatRow(label: "Powering", value: s.peripherals.map(\.name).joined(separator: ", ")

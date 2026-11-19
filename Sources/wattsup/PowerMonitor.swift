@@ -21,6 +21,7 @@ final class PowerMonitor {
 
     @ObservationIgnored var onUpdate: (() -> Void)?
     let energy = EnergyModeController()
+    let impact = EnergyImpactMonitor()
     @ObservationIgnored private let store = ChargerStore()
     @ObservationIgnored private var timer: Timer?
     @ObservationIgnored private var lastSave = Date.distantPast
