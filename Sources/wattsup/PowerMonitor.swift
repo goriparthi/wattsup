@@ -24,6 +24,7 @@ final class PowerMonitor {
     @ObservationIgnored var onUpdate: (() -> Void)?
     let energy = EnergyModeController()
     let impact = EnergyImpactMonitor()
+    let accessories = AccessoryBatteryReader()
     @ObservationIgnored private let store = ChargerStore()
     @ObservationIgnored private var timer: Timer?
     @ObservationIgnored private var lastSave = Date.distantPast
@@ -78,6 +79,7 @@ final class PowerMonitor {
             // USB enumeration is heavier than the battery read, so it runs every third tick
             if ticksSincePeripheralScan >= Self.peripheralScanEvery {
                 peripherals = USBPeripherals.read()
+                accessories.refreshIfDue()
                 thermalsReader.read { [weak self] t in
                     DispatchQueue.main.async { self?.thermals = t }
                 }

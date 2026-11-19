@@ -99,6 +99,9 @@ struct PopoverView: View {
                     }
                     if let c = t.cpuC { StatRow(label: "Chip", value: Units.celsius(c)) }
                 }
+                ForEach(monitor.accessories.devices) { d in
+                    StatRow(label: d.name, value: d.summary, tint: (d.lowest ?? 100) <= 20 ? Theme.warning : nil)
+                }
                 if let busiest = monitor.impact.apps.first {
                     StatRow(label: "Busiest app", value: busiest.name)
                 }

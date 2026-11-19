@@ -57,8 +57,8 @@ struct DashboardView: View {
                                     .foregroundStyle(Theme.secondaryText)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
-                            if !s.peripherals.isEmpty {
-                                AccessoriesCard(peripherals: s.peripherals, compact: true)
+                            if !s.peripherals.isEmpty || !monitor.accessories.devices.isEmpty {
+                                AccessoriesCard(peripherals: s.peripherals, batteries: monitor.accessories.devices, compact: true)
                             }
                         }
                         .frame(width: 360)
@@ -385,10 +385,20 @@ struct ChargerHistoryCard: View {
 
 struct AccessoriesCard: View {
     let peripherals: [Peripheral]
+    var batteries: [AccessoryBattery] = []
     var compact = false
 
     var body: some View {
-        Card(title: "Powering accessories", symbol: "cable.connector") {
+        Card(title: "Accessories", symbol: "cable.connector") {
+            ForEach(batteries) { d in
+                HStack {
+                    Label(d.name, systemImage: d.symbolName).lineLimit(1)
+                    Spacer()
+                    Text(d.summary).monospacedDigit()
+                        .foregroundStyle((d.lowest ?? 100) <= 20 ? Theme.warning : Theme.secondaryText)
+                }
+                .font(.callout)
+            }
             ForEach(peripherals) { p in
                 HStack {
                     Label(p.name, systemImage: p.symbolName)
@@ -405,10 +415,12 @@ struct AccessoriesCard: View {
                 }
                 .font(.callout)
             }
-            Text("macOS reports the power it set aside for each device, not a live reading, so these are ceilings. Whatever they draw is already part of Mac uses.")
+            if !peripherals.isEmpty {
+                Text("Powered over USB: macOS reports the power it set aside for each device, not a live reading, so these are ceilings. Whatever they draw is already part of Mac uses.")
                 .font(.caption)
                 .foregroundStyle(Theme.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 }
