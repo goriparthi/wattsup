@@ -46,25 +46,34 @@ struct PopoverView: View {
         }
     }
 
+    /// Readings grouped by what they describe, so charger and battery figures never blur together.
     private func details(_ s: PowerSnapshot) -> some View {
-        VStack(spacing: 5) {
+        VStack(alignment: .leading, spacing: 10) {
             if let adapter = s.adapter {
-                StatRow(label: "Charger", value: adapter.title)
-                if let e = ChargerEfficiency(snapshot: s) {
-                    StatRow(label: "Efficiency", value: e.summary, tint: Color(Brand.color(e.grade.tone)))
+                DetailGroup(title: "Charger", symbol: "powerplug.fill", tint: Theme.input) {
+                    StatRow(label: "Charger", value: adapter.title)
+                    if let e = ChargerEfficiency(snapshot: s) {
+                        StatRow(label: "Efficiency", value: e.summary, tint: Color(Brand.color(e.grade.tone)))
+                    }
+                    if let load = s.chargerLoad {
+                        StatRow(label: "Load", value: "\(Units.percent(load)) of \(Units.watts(adapter.ceilingWatts, digits: 0))",
+                                tint: Theme.load(load))
+                    }
                 }
-                if let load = s.chargerLoad {
-                    StatRow(label: "Charger load", value: "\(Units.percent(load)) of \(Units.watts(adapter.ceilingWatts, digits: 0))",
-                            tint: Theme.load(load))
+                Divider()
+            }
+            DetailGroup(title: "Battery", symbol: "battery.75percent", tint: Theme.charging) {
+                StatRow(label: "Health", value: Units.percent(s.health, digits: 1))
+                StatRow(label: "Temperature", value: Units.celsius(s.temperatureC))
+            }
+            Divider()
+            DetailGroup(title: "Mac", symbol: "laptopcomputer", tint: Theme.system) {
+                if !s.peripherals.isEmpty {
+                    StatRow(label: "Powering", value: s.peripherals.map(\.name).joined(separator: ", ")
+                            + ", up to " + Units.watts(s.peripherals.allocatedWatts, digits: 0), tint: Theme.system)
                 }
+                EnergyModePicker(energy: monitor.energy, source: s.isExternalPower ? .charger : .battery, compact: true)
             }
-            StatRow(label: "Health", value: Units.percent(s.health, digits: 1))
-            StatRow(label: "Temperature", value: Units.celsius(s.temperatureC))
-            if !s.peripherals.isEmpty {
-                StatRow(label: "Powering", value: s.peripherals.map(\.name).joined(separator: ", ")
-                        + ", up to " + Units.watts(s.peripherals.allocatedWatts, digits: 0), tint: Theme.system)
-            }
-            EnergyModePicker(energy: monitor.energy, source: s.isExternalPower ? .charger : .battery, compact: true)
         }
     }
 
@@ -122,6 +131,23 @@ struct UnavailableView: View {
         case .readFailed(let message):
             ContentUnavailableView("Can't read the battery", systemImage: "exclamationmark.triangle",
                                    description: Text(message))
+        }
+    }
+}
+
+private struct DetailGroup<Content: View>: View {
+    let title: String
+    let symbol: String
+    let tint: Color
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Label(title, systemImage: symbol)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(tint)
+                .textCase(.uppercase)
+            content
         }
     }
 }
