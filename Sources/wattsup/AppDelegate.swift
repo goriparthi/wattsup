@@ -9,6 +9,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let settings = AppSettings()
     private lazy var updates = UpdateController(settings: settings)
     private var settingsWindow: NSWindow?
+    private var welcomeWindow: NSWindow?
+    private static let welcomedKey = "hasSeenWelcome"
     private let visibility = MenuBarVisibility()
     private lazy var alerts = AlertCenter(settings: settings)
     private var statusItem: NSStatusItem!
@@ -27,6 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             monitor: monitor, settings: settings, actions: PopoverActions(
                 openDashboard: { [weak self] in self?.showDashboard() },
                 openSettings: { [weak self] in self?.showSettings() },
+                openWelcome: { [weak self] in self?.showWelcome() },
                 checkForUpdates: { [weak self] in
                     guard let self else { return }
                     Task { await self.updates.check(interactive: true) }
@@ -49,6 +52,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if CommandLine.arguments.contains("--dashboard") { showDashboard() }
         if CommandLine.arguments.contains("--settings") { showSettings() }
+        if CommandLine.arguments.contains("--welcome") || !UserDefaults.standard.bool(forKey: Self.welcomedKey) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in self?.showWelcome() }
+        }
         // Opens the popover at launch so its layout can be checked without a click
         if CommandLine.arguments.contains("--popover") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in self?.togglePopover() }
@@ -89,6 +95,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
         }
+    }
+
+    func showWelcome() {
+        popover.performClose(nil)
+        if welcomeWindow == nil {
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 520),
+                                  styleMask: [.titled, .closable], backing: .buffered, defer: false)
+            window.title = "Welcome"
+            window.isReleasedWhenClosed = false
+            window.contentView = NSHostingView(rootView: WelcomeView(settings: settings) { [weak self] in
+                UserDefaults.standard.set(true, forKey: Self.welcomedKey)
+                self?.welcomeWindow?.close()
+            })
+            window.center()
+            welcomeWindow = window
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        welcomeWindow?.makeKeyAndOrderFront(nil)
     }
 
     func showSettings() {

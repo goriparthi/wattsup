@@ -10,7 +10,7 @@ readings. Hover any number for a tooltip naming it. Click it for the popover.
 Out of the box it shows **From the wall | Charger load | Mac uses | Battery percent**. On battery
 the two charger readings drop out, leaving Mac use and percent.
 
-Settings (gear menu, then Settings) lists all 14 readings. Tick the ones to show; use the arrows to
+Settings (gear menu, then Settings) lists all 16 readings. Tick the ones to show; use the arrows to
 reorder any of them. Choose one line or two stacked rows, colors on or off, the outline, and the
 icon (power bolt and plug, battery state, or none).
 
@@ -26,6 +26,8 @@ icon (power bolt and plug, battery state, or none).
 | Battery percent, Time, Temperature, Health | | |
 | Energy mode | Shown only when Low or High Power is on | |
 | Powering accessories | Power macOS allocated to USB devices | |
+| Chip temperature | Average of the CPU sensors | |
+| Fan speed | The faster fan; hidden on fanless Macs | |
 
 Colors: charger input blue, Mac use purple, charging green, draining pink, warnings amber.
 

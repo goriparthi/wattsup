@@ -38,7 +38,7 @@ case "--help", "-h":
       --diagnostics   print the log folder, recent log lines and saved crash reports
       --version       print the version
     """)
-case .some(let arg) where !["--dashboard", "--popover", "--settings"].contains(arg):
+case .some(let arg) where !["--dashboard", "--popover", "--settings", "--welcome"].contains(arg):
     FileHandle.standardError.write(Data("unknown argument: \(arg)\n".utf8))
     exit(2)
 default:

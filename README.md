@@ -10,7 +10,7 @@ Site: https://goriparthi.github.io/wattsup/
 
 ## What it shows
 
-- **Menu bar**: pick any of 14 readings and order them, on one line or two rows, colored by meaning
+- **Menu bar**: pick any of 16 readings and order them, on one line or two rows, colored by meaning
   in an outlined capsule. Hover a number to see what it is.
 - **Popover**: a battery tank that fills and drains, a hybrid car style power flow from charger to
   Mac to battery (and to any powered accessories), the charger verdict, and grouped details.

@@ -6,6 +6,7 @@ import WattsupCore
 struct PopoverActions {
     var openDashboard: () -> Void
     var openSettings: () -> Void
+    var openWelcome: () -> Void
     var checkForUpdates: () -> Void
 }
 
@@ -144,6 +145,7 @@ struct SettingsMenu: View {
             Toggle("Check for Updates Daily", isOn: Binding(
                 get: { settings.checksForUpdates }, set: { settings.checksForUpdates = $0 }))
             Button("Battery Settings…", action: SystemSettings.openBattery)
+            Button("Show Welcome…", action: actions.openWelcome)
             Button("Reveal Logs in Finder", action: Diagnostics.revealInFinder)
             Divider()
             Button("Quit Wattsup") { NSApp.terminate(nil) }
