@@ -9,7 +9,7 @@ public enum MetricTone: String, Sendable {
 /// the charger input when plugged in, the battery pack when not.
 public enum MenuBarMetric: String, CaseIterable, Codable, Identifiable, Sendable {
     case watts, volts, amps, systemWatts, batteryWatts, wallWatts, chargerLoad
-    case percent, time, temperature, health, energyMode
+    case percent, time, temperature, health, energyMode, peripherals
 
     /// Wall draw, Mac use, charger load and percent; the two charger readings drop out on battery.
     public static let defaults: [MenuBarMetric] = [.wallWatts, .systemWatts, .chargerLoad, .percent]
@@ -29,6 +29,7 @@ public enum MenuBarMetric: String, CaseIterable, Codable, Identifiable, Sendable
         case .temperature: return "Battery temperature"
         case .health: return "Battery health"
         case .energyMode: return "Energy mode"
+        case .peripherals: return "Powering accessories"
         }
     }
 
@@ -41,6 +42,7 @@ public enum MenuBarMetric: String, CaseIterable, Codable, Identifiable, Sendable
         case .wallWatts: return "Charger input plus its conversion loss"
         case .chargerLoad: return "Share of the charger's limit in use"
         case .energyMode: return "Shown only when Low or High Power is on"
+        case .peripherals: return "Power the Mac allocated to USB devices, shown when any are plugged in"
         case .percent, .time, .temperature, .health: return ""
         }
     }
@@ -62,6 +64,8 @@ public enum MenuBarMetric: String, CaseIterable, Codable, Identifiable, Sendable
         case .temperature: return s.temperatureC.map { String(format: "%.0f°C", $0) }
         case .health: return s.health.map { String(format: "%.0f%%", $0 * 100) }
         case .energyMode: return s.energyMode?.shortTitle
+        case .peripherals:
+            return s.peripherals.isEmpty ? nil : String(format: "USB %.0fW", s.peripherals.allocatedWatts)
         }
     }
 
@@ -81,6 +85,7 @@ public enum MenuBarMetric: String, CaseIterable, Codable, Identifiable, Sendable
         case .temperature: return (s.temperatureC ?? 0) >= 40 ? .warning : .neutral
         case .health: return (s.health ?? 1) < 0.8 ? .warning : .neutral
         case .energyMode: return s.energyMode == .high ? .warning : .charging
+        case .peripherals: return .system
         }
     }
 

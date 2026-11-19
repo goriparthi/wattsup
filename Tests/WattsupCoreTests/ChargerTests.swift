@@ -53,6 +53,23 @@ final class ChargerTests: XCTestCase {
         XCTAssertTrue(a.advisories.contains { $0.contains("cable") }, "\(a.advisories)")
     }
 
+    func testThreeAmpMenuIsFlaggedAsCableCapped() {
+        var d = Fixture.charging()
+        d["AdapterDetails"] = [
+            "Watts": 60, "AdapterVoltage": 20000, "Current": 3000, "UsbHvcHvcIndex": 3,
+            "UsbHvcMenu": [
+                ["Index": 0, "MaxCurrent": 3000, "MaxVoltage": 5000],
+                ["Index": 1, "MaxCurrent": 3000, "MaxVoltage": 9000],
+                ["Index": 2, "MaxCurrent": 3000, "MaxVoltage": 15000],
+                ["Index": 3, "MaxCurrent": 3000, "MaxVoltage": 20000],
+            ],
+        ] as [String: Any]
+        let adapter = Fixture.snapshot(d).adapter!
+        XCTAssertTrue(ChargerAssessment.looksCableCapped(adapter))
+        // The 45 W fixture tops out at 2.25 A, which is the charger's own limit, not the cable's
+        XCTAssertFalse(ChargerAssessment.looksCableCapped(Fixture.snapshot(Fixture.charging()).adapter!))
+    }
+
     func testSuggestedSizes() {
         XCTAssertEqual(ChargerAssessment.suggestedSize(forDemand: 25), 30)
         XCTAssertEqual(ChargerAssessment.suggestedSize(forDemand: 58), 65)

@@ -35,7 +35,7 @@ struct PopoverView: View {
 
     private func header(_ s: PowerSnapshot) -> some View {
         HStack(spacing: 12) {
-            ChargeRing(snapshot: s, size: 48, lineWidth: 5)
+            BatteryTank(snapshot: s, width: 34, height: 52)
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(s.percent)%")
                     .font(.system(size: 26, weight: .semibold, design: .rounded))
@@ -57,6 +57,10 @@ struct PopoverView: View {
             }
             StatRow(label: "Health", value: Units.percent(s.health, digits: 1))
             StatRow(label: "Temperature", value: Units.celsius(s.temperatureC))
+            if !s.peripherals.isEmpty {
+                StatRow(label: "Powering", value: s.peripherals.map(\.name).joined(separator: ", ")
+                        + ", up to " + Units.watts(s.peripherals.allocatedWatts, digits: 0), tint: Theme.system)
+            }
             EnergyModePicker(energy: monitor.energy, source: s.isExternalPower ? .charger : .battery, compact: true)
         }
     }

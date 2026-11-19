@@ -27,6 +27,9 @@ struct DashboardView: View {
                         ChargerCard(snapshot: s, assessment: monitor.assessment)
                         BatteryCard(snapshot: s)
                     }
+                    if !s.peripherals.isEmpty {
+                        AccessoriesCard(peripherals: s.peripherals)
+                    }
                     Card(title: "Energy mode", symbol: "leaf") {
                         HStack(alignment: .top, spacing: 24) {
                             EnergyModePicker(energy: monitor.energy, source: .battery, compact: false)
@@ -51,7 +54,7 @@ struct DashboardView: View {
 
     private func hero(_ s: PowerSnapshot) -> some View {
         HStack(spacing: 20) {
-            ChargeRing(snapshot: s, size: 76, lineWidth: 8)
+            BatteryTank(snapshot: s, width: 54, height: 86)
             VStack(alignment: .leading, spacing: 4) {
                 Text("\(s.percent)%")
                     .font(.system(size: 40, weight: .semibold, design: .rounded))
@@ -285,6 +288,32 @@ struct ChargerHistoryCard: View {
                     }
                 }
             }
+        }
+    }
+}
+
+struct AccessoriesCard: View {
+    let peripherals: [Peripheral]
+
+    var body: some View {
+        Card(title: "Powering accessories", symbol: "cable.connector") {
+            ForEach(peripherals) { p in
+                HStack {
+                    Label(p.name, systemImage: p.symbolName)
+                    Spacer()
+                    Text("up to \(Units.watts(p.allocatedWatts))")
+                        .monospacedDigit()
+                        .foregroundStyle(Theme.system)
+                    Text("\(p.allocatedMilliamps) mA at 5 V")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .frame(width: 110, alignment: .trailing)
+                }
+                .font(.callout)
+            }
+            Text("macOS reports the power it set aside for each device, not a live reading, so these are ceilings. Whatever they draw is already part of Mac uses.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 }

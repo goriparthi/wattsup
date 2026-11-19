@@ -61,6 +61,14 @@ final class AppSettings {
         metrics.move(fromOffsets: source, toOffset: destination)
     }
 
+    /// Moves a shown reading one place left (up) or right (down) in the menu bar.
+    func shift(_ metric: MenuBarMetric, by offset: Int) {
+        guard let i = metrics.firstIndex(of: metric) else { return }
+        let j = i + offset
+        guard metrics.indices.contains(j) else { return }
+        metrics.swapAt(i, j)
+    }
+
     func resetMenuBar() {
         metrics = MenuBarMetric.defaults
         layout = .line

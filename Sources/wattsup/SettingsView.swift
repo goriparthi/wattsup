@@ -22,13 +22,11 @@ struct SettingsView: View {
                 }
             }
             Section {
-                List {
-                    ForEach(settings.metrics) { metric in
-                        MetricRow(metric: metric, snapshot: monitor.snapshot, on: true) { settings.toggle(metric) }
-                    }
-                    .onMove { settings.move(from: $0, to: $1) }
+                ForEach(Array(settings.metrics.enumerated()), id: \.element) { index, metric in
+                    MetricRow(metric: metric, snapshot: monitor.snapshot, on: true,
+                              canMoveUp: index > 0, canMoveDown: index < settings.metrics.count - 1,
+                              move: { settings.shift(metric, by: $0) }) { settings.toggle(metric) }
                 }
-                .frame(minHeight: CGFloat(max(1, settings.metrics.count)) * 30)
                 ForEach(MenuBarMetric.allCases.filter { !settings.metrics.contains($0) }) { metric in
                     MetricRow(metric: metric, snapshot: monitor.snapshot, on: false) { settings.toggle(metric) }
                 }
@@ -36,7 +34,7 @@ struct SettingsView: View {
                 Text("Readings")
             } footer: {
                 HStack {
-                    Text("Drag shown readings to reorder. In the stacked layout the first half goes on the top row.")
+                    Text("Use the arrows to reorder. Left to right in the menu bar; stacked puts the first half on top.")
                     Spacer()
                     Button("Reset") { settings.resetMenuBar() }
                 }
@@ -106,6 +104,9 @@ struct MetricRow: View {
     let metric: MenuBarMetric
     let snapshot: PowerSnapshot?
     let on: Bool
+    var canMoveUp = false
+    var canMoveDown = false
+    var move: (Int) -> Void = { _ in }
     let toggle: () -> Void
 
     var body: some View {
@@ -126,7 +127,16 @@ struct MetricRow: View {
                     .foregroundStyle(Color(nsColor: StatusItemRenderer.color(metric.tone(for: s), colored: true)))
             }
             if on {
-                Image(systemName: "line.3.horizontal").foregroundStyle(.tertiary).accessibilityHidden(true)
+                ControlGroup {
+                    Button { move(-1) } label: { Image(systemName: "chevron.up") }
+                        .disabled(!canMoveUp)
+                        .accessibilityLabel("Move \(metric.title) earlier")
+                    Button { move(1) } label: { Image(systemName: "chevron.down") }
+                        .disabled(!canMoveDown)
+                        .accessibilityLabel("Move \(metric.title) later")
+                }
+                .controlSize(.small)
+                .fixedSize()
             }
         }
     }

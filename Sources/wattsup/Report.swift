@@ -12,10 +12,11 @@ enum Report {
             FileHandle.standardError.write(Data("\(message)\n".utf8))
             return 1
         case .properties(let props):
-            guard let s = PowerSnapshot(registry: props) else {
+            guard var s = PowerSnapshot(registry: props) else {
                 FileHandle.standardError.write(Data("battery reading had no charge level\n".utf8))
                 return 1
             }
+            s.peripherals = USBPeripherals.read()
             print(lines(s).joined(separator: "\n"))
             return 0
         }
@@ -31,6 +32,9 @@ enum Report {
         out.append("Battery    \(Units.watts(s.batteryWatts, signed: true))  \(Units.volts(s.batteryVolts))  \(Units.amps(s.batteryAmps))")
         if let w = s.requestedBatteryWatts { out.append("Requested  \(Units.watts(w)) by the battery, demand \(Units.watts(s.demandWatts))") }
         out.append("Health     \(Units.percent(s.health, digits: 1)), \(s.cycleCount ?? 0) cycles, \(Units.celsius(s.temperatureC))")
+        for p in s.peripherals {
+            out.append("Powering   \(p.name), up to \(Units.watts(p.allocatedWatts)) allocated")
+        }
         if !s.cellVolts.isEmpty {
             out.append("Cells      " + s.cellVolts.map { Units.volts($0, digits: 3) }.joined(separator: "  "))
         }

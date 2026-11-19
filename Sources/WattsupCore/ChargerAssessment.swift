@@ -97,6 +97,10 @@ public struct ChargerAssessment: Equatable, Sendable {
             notes.append("Using the \(Units.watts(active.watts, digits: 0)) profile although the charger "
                 + "offers \(Units.watts(best.watts, digits: 0)). A different cable or port may unlock it.")
         }
+        if Self.looksCableCapped(adapter) {
+            notes.append("Capped at 60 W: every profile tops out at 3 A, the most a standard USB-C cable "
+                + "carries. If the charger is rated higher, a 5 A cable rated 100 W or 240 W unlocks more.")
+        }
         if let amps = adapter.negotiatedAmps, let active = adapter.activeProfile, amps < active.amps - 0.1 {
             notes.append("Current is capped at \(Units.amps(amps)) below the profile's "
                 + "\(Units.amps(active.amps)). The cable may be limiting it.")
@@ -112,6 +116,14 @@ public struct ChargerAssessment: Equatable, Sendable {
             notes.append("Charging was slowed by heat for \(Units.duration(minutes: max(1, seconds / 60))).")
         }
         return notes
+    }
+
+    /// Chargers offer more than 3 A only after detecting a 5 A cable, so a menu that stops
+    /// at exactly 20 V and 3 A is the signature of a 3 A cable or a 60 W charger.
+    public static func looksCableCapped(_ adapter: AdapterInfo) -> Bool {
+        guard let best = adapter.bestProfile, !adapter.isWireless else { return false }
+        let maxAmps = adapter.profiles.map(\.amps).max() ?? 0
+        return abs(best.volts - 20) < 0.1 && abs(maxAmps - 3) < 0.01 && abs(best.amps - 3) < 0.01
     }
 
     static func median(_ values: [Double]) -> Double {

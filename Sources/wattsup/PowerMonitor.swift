@@ -22,6 +22,10 @@ final class PowerMonitor {
     @ObservationIgnored private var timer: Timer?
     @ObservationIgnored private var lastSave = Date.distantPast
     @ObservationIgnored private var lastFingerprint: String?
+    @ObservationIgnored private var peripherals: [Peripheral] = []
+    private static let peripheralScanEvery = 3
+    /// Starts due, so the first reading already includes attached devices
+    @ObservationIgnored private var ticksSincePeripheralScan = PowerMonitor.peripheralScanEvery
 
     init() {
         chargers = store.load()
@@ -54,6 +58,13 @@ final class PowerMonitor {
                 break
             }
             s.energyMode = energy.effective(onCharger: s.isExternalPower)
+            // USB enumeration is heavier than the battery read, so it runs every third tick
+            if ticksSincePeripheralScan >= Self.peripheralScanEvery {
+                peripherals = USBPeripherals.read()
+                ticksSincePeripheralScan = 0
+            }
+            ticksSincePeripheralScan += 1
+            s.peripherals = peripherals
             history.append(s)
             let a = ChargerAssessment(snapshot: s, history: history)
             let settled = a.verdict != .measuring && a.verdict != .unplugged

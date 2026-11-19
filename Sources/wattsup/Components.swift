@@ -66,31 +66,6 @@ struct StatRow: View {
     }
 }
 
-struct ChargeRing: View {
-    let snapshot: PowerSnapshot
-    var size: CGFloat = 56
-    var lineWidth: CGFloat = 6
-
-    private var tint: Color {
-        snapshot.percent <= 15 && snapshot.state == .discharging ? Theme.warning : Theme.battery(snapshot.batteryWatts)
-    }
-
-    var body: some View {
-        ZStack {
-            Circle().stroke(Color.primary.opacity(0.1), lineWidth: lineWidth)
-            Circle()
-                .trim(from: 0, to: CGFloat(snapshot.percent) / 100)
-                .stroke(tint, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-            Image(systemName: snapshot.symbolName)
-                .font(.system(size: size * 0.28))
-                .foregroundStyle(.secondary)
-        }
-        .frame(width: size, height: size)
-        .accessibilityLabel("Battery \(snapshot.percent) percent, \(snapshot.state.title)")
-    }
-}
-
 /// Charger to Mac to Battery, with watts on each leg.
 struct FlowDiagram: View {
     let snapshot: PowerSnapshot
