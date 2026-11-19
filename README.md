@@ -22,7 +22,8 @@ Site: https://goriparthi.github.io/wattsup/
   remembers every charger you use with its peak load.
 
 Everything comes from the `AppleSmartBattery` IOKit entry, read locally without admin rights.
-No network, no account, no tracking.
+Readings never leave the Mac: no account, no analytics. The only network request is a daily
+check of this repo's releases for an update, which can be turned off in Settings.
 
 ## Requirements
 
@@ -55,10 +56,18 @@ The charger verdict uses only measured values: the active Power Delivery profile
 ceiling, the battery's own requested voltage and current give the demand. Reason codes for slow
 or paused charging are shown raw because Apple does not document them.
 
-## Signing
+## Updates and releases
 
-`make bundle` signs with a Developer ID Application certificate when the keychain has one, and
-ad-hoc otherwise. Notarized releases use a `notarytool` keychain profile.
+The app checks GitHub releases daily (Settings can turn it off) and on demand. An update installs
+in place only when the DMG passes Gatekeeper and is signed by the pinned Developer ID team.
+
+To ship: bump `Resources/Info.plist`, write `notes/releases/<version>.md`, commit and push, then
+`NOTARY_PROFILE=<profile> make release`. A release must be notarized or the updater refuses it.
+
+## Debugging aids
+
+`wattsup --popover`, `--settings` and `--dashboard` open that view at launch, and
+`wattsup --render-menubar <dir>` draws every menu bar style to PNGs from a live reading.
 
 ## License
 

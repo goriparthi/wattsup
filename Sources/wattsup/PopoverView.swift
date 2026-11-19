@@ -3,10 +3,16 @@ import SwiftUI
 import WattsupCore
 
 /// The quick look shown from the menu bar; the dashboard holds the full detail.
+struct PopoverActions {
+    var openDashboard: () -> Void
+    var openSettings: () -> Void
+    var checkForUpdates: () -> Void
+}
+
 struct PopoverView: View {
     let monitor: PowerMonitor
     let settings: AppSettings
-    let openDashboard: () -> Void
+    let actions: PopoverActions
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -56,16 +62,17 @@ struct PopoverView: View {
 
     private var footer: some View {
         HStack {
-            Button("Open Dashboard", action: openDashboard)
+            Button("Open Dashboard", action: actions.openDashboard)
                 .keyboardShortcut("d")
             Spacer()
-            SettingsMenu(settings: settings)
+            SettingsMenu(settings: settings, actions: actions)
         }
     }
 }
 
 struct SettingsMenu: View {
     let settings: AppSettings
+    let actions: PopoverActions
 
     var body: some View {
         Menu {
@@ -75,12 +82,11 @@ struct SettingsMenu: View {
                         get: { settings.metrics.contains(metric) },
                         set: { _ in settings.toggle(metric) }))
                 }
-                Toggle("Icon", isOn: Binding(get: { settings.showsIcon }, set: { settings.showsIcon = $0 }))
             }
             Divider()
-            Toggle("Open at Login", isOn: Binding(
-                get: { settings.launchesAtLogin },
-                set: { settings.setLaunchesAtLogin($0) }))
+            Button("Settings…", action: actions.openSettings)
+                .keyboardShortcut(",")
+            Button("Check for Updates…", action: actions.checkForUpdates)
             Button("Battery Settings…") {
                 if let url = URL(string: "x-apple.systempreferences:com.apple.Battery-Settings.extension") {
                     NSWorkspace.shared.open(url)

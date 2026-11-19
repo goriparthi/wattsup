@@ -13,7 +13,7 @@ final class PowerSnapshotTests: XCTestCase {
         XCTAssertEqual(s.systemWatts, 15.857, accuracy: 0.001)
         XCTAssertEqual(try XCTUnwrap(s.wallWatts), 44.203, accuracy: 0.001)
         XCTAssertEqual(try XCTUnwrap(s.temperatureC), 30.57, accuracy: 0.001)
-        XCTAssertEqual(try XCTUnwrap(s.health), 8054.0 / 8579.0, accuracy: 0.0001)
+        XCTAssertEqual(try XCTUnwrap(s.health), 8298.0 / 8579.0, accuracy: 0.0001)
         XCTAssertEqual(s.cellVolts, [4.264, 4.259, 4.265])
         XCTAssertEqual(s.cellSpreadMillivolts, 6)
     }
@@ -42,7 +42,8 @@ final class PowerSnapshotTests: XCTestCase {
         XCTAssertEqual(s.minutesToEmpty, 190)
         XCTAssertNil(s.adapter)
         XCTAssertNil(s.inputWatts)
-        XCTAssertEqual(s.headlineWatts, 18.6, accuracy: 0.001)
+        XCTAssertEqual(s.headlineWatts, 12.4 * 1.5, accuracy: 0.001)
+        XCTAssertEqual(s.systemWatts, -s.batteryWatts, accuracy: 0.0001, "on battery both legs agree")
         XCTAssertEqual(s.busAmps, 1.5, accuracy: 0.0001)
     }
 

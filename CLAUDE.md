@@ -22,5 +22,6 @@ the app (`make run`) and looking at it, not by reading the code.
 
 ## Deploying
 
-The site deploys from `site/` on push to `main`. App releases are not set up yet; when they are,
-follow `../redline/docs/DEPLOY.md` and confirm before publishing.
+The site deploys from `site/` on push to `main`. App releases: bump `Resources/Info.plist`, write
+`notes/releases/<version>.md`, commit, push, then `NOTARY_PROFILE=redline make release`. Publishing
+is outward facing and every installed copy will be offered it, so confirm before releasing.

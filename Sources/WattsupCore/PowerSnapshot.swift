@@ -107,8 +107,10 @@ public struct PowerSnapshot: Equatable, Sendable {
 
     public var batteryWatts: Double { batteryVolts * batteryAmps }
 
-    /// Power the Mac itself uses. Prefers the controller's own figure over the difference.
+    /// Power the Mac itself uses. On battery the pack is the only source, so its own reading
+    /// keeps both legs of the flow equal; the controller's load figure is a smoothed average.
     public var systemWatts: Double {
+        if !isExternalPower { return max(0, -batteryWatts) }
         if let systemLoadWatts, systemLoadWatts > 0 { return systemLoadWatts }
         return max(0, (inputWatts ?? 0) - batteryWatts)
     }
@@ -136,8 +138,10 @@ public struct PowerSnapshot: Equatable, Sendable {
         systemWatts + (requestedBatteryWatts ?? max(0, batteryWatts))
     }
 
+    /// Long-term capacity against design. The nominal figure is steadier than the raw full
+    /// charge capacity, which moves with temperature and load.
     public var health: Double? {
-        guard let full = fullChargeCapacity, let design = designCapacity, design > 0 else { return nil }
+        guard let full = nominalCapacity ?? fullChargeCapacity, let design = designCapacity, design > 0 else { return nil }
         return Double(full) / Double(design)
     }
 

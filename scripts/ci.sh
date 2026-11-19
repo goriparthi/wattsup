@@ -10,6 +10,7 @@ step "No em or en dashes"
 if grep -rnI $'\xe2\x80\x94\|\xe2\x80\x93' --exclude-dir=.build --exclude-dir=dist --exclude-dir=.git "$REPO_ROOT"; then
     die "em or en dash found; reword it"
 fi
+step "Release notes"; "$REPO_ROOT/scripts/check-notes.sh" --allow-missing
 step "Unit tests"; "$REPO_ROOT/scripts/test.sh"
 step "Bundle"; "$REPO_ROOT/scripts/bundle.sh"
 step "Verify bundle"; "$REPO_ROOT/scripts/verify-bundle.sh"

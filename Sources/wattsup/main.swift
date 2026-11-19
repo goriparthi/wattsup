@@ -9,15 +9,19 @@ case "--version":
     print("wattsup \(version)")
 case "--snapshot":
     exit(Report.printSnapshot())
+case "--render-menubar":
+    let dir = CommandLine.arguments.dropFirst(2).first ?? "dist/menubar"
+    exit(MainActor.assumeIsolated { MenuBarRender.run(directory: dir) })
 case "--help", "-h":
     print("""
     wattsup \(version)
       (no arguments)  run in the menu bar
       --dashboard     run and open the dashboard
+      --settings      run and open settings
       --snapshot      print one reading and exit
       --version       print the version
     """)
-case .some(let arg) where arg != "--dashboard":
+case .some(let arg) where !["--dashboard", "--popover", "--settings"].contains(arg):
     FileHandle.standardError.write(Data("unknown argument: \(arg)\n".utf8))
     exit(2)
 default:
