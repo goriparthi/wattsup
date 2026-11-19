@@ -18,7 +18,7 @@ struct PopoverView: View {
         VStack(alignment: .leading, spacing: 12) {
             if let s = monitor.snapshot {
                 header(s)
-                FlowDiagram(snapshot: s)
+                PowerFlowView(snapshot: s)
                 if let a = monitor.assessment { VerdictBanner(assessment: a, showsAdvisories: false) }
                 SeriesChart(series: Series.power(monitor.history.recent(300).thinned(to: 150)),
                             unit: "W", height: 90, showsZero: true, showsLegend: false)
@@ -50,6 +50,9 @@ struct PopoverView: View {
         VStack(spacing: 5) {
             if let adapter = s.adapter {
                 StatRow(label: "Charger", value: adapter.title)
+                if let e = ChargerEfficiency(snapshot: s) {
+                    StatRow(label: "Efficiency", value: e.summary, tint: Color(Brand.color(e.grade.tone)))
+                }
                 if let load = s.chargerLoad {
                     StatRow(label: "Charger load", value: "\(Units.percent(load)) of \(Units.watts(adapter.ceilingWatts, digits: 0))",
                             tint: Theme.load(load))

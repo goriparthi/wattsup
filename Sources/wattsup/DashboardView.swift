@@ -15,7 +15,7 @@ struct DashboardView: View {
                     hero(s)
                     HStack(alignment: .top, spacing: 16) {
                         Card(title: "Power flow", symbol: "arrow.left.arrow.right") {
-                            FlowDiagram(snapshot: s, large: true)
+                            PowerFlowView(snapshot: s, large: true)
                         }
                         Card(title: "Charger check", symbol: "checkmark.shield") {
                             if let a = monitor.assessment { VerdictBanner(assessment: a) }
@@ -179,11 +179,8 @@ struct ChargerCard: View {
                 if let demand = assessment?.peakDemandWatts {
                     StatRow(label: "Mac would use, peak", value: Units.watts(demand))
                 }
-                if let loss = snapshot.adapterLossWatts, let input = snapshot.inputWatts, input > 0 {
-                    StatRow(label: "Conversion loss", value: Units.watts(loss))
-                    StatRow(label: "Charger efficiency", value: Units.percent(input / (input + loss), digits: 1))
-                }
-                if let wall = snapshot.wallWatts { StatRow(label: "From the wall, est.", value: Units.watts(wall)) }
+                Divider()
+                EfficiencyRating(snapshot: snapshot)
                 if a.isWireless { StatRow(label: "Type", value: "Wireless") }
                 if !a.profiles.isEmpty {
                     Divider()
@@ -257,7 +254,7 @@ struct ChargerHistoryCard: View {
             } else {
                 Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 8) {
                     GridRow {
-                        Text("Charger"); Text("Limit"); Text("Peak load"); Text("Mac wanted"); Text("Used"); Text("Last seen"); Text("Verdict"); Text("")
+                        Text("Charger"); Text("Limit"); Text("Peak load"); Text("Efficiency"); Text("Mac wanted"); Text("Used"); Text("Last seen"); Text("Verdict"); Text("")
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -271,6 +268,12 @@ struct ChargerHistoryCard: View {
                             }
                             Text(Units.watts(r.ceilingWatts, digits: 0))
                             Text(Units.percent(r.peakLoad)).foregroundStyle(Theme.load(r.peakLoad ?? 0))
+                            if let e = r.averageEfficiency {
+                                let grade = ChargerEfficiency.Grade.of(e)
+                                Text("\(Units.percent(e)) \(grade.title)").foregroundStyle(Color(Brand.color(grade.tone)))
+                            } else {
+                                Text("Not rated").foregroundStyle(.secondary)
+                            }
                             Text(Units.watts(r.peakDemandWatts, digits: 0))
                             Text(Units.duration(minutes: Int(r.secondsConnected / 60)))
                             Text(r.lastSeen, format: .relative(presentation: .named))
@@ -314,6 +317,50 @@ struct AccessoriesCard: View {
             Text("macOS reports the power it set aside for each device, not a live reading, so these are ceilings. Whatever they draw is already part of Mac uses.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// Charger efficiency as a grade with the wall, delivered and lost watts behind it.
+struct EfficiencyRating: View {
+    let snapshot: PowerSnapshot
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("Efficiency").font(.callout.weight(.semibold))
+                Spacer()
+                if let e = ChargerEfficiency(snapshot: snapshot) {
+                    let tint = Color(Brand.color(e.grade.tone))
+                    Text("\(Units.percent(e.efficiency, digits: 1)) · \(e.grade.title)")
+                        .font(.callout.weight(.semibold).monospacedDigit())
+                        .padding(.horizontal, 8).padding(.vertical, 2)
+                        .background(Capsule().fill(tint.opacity(0.15)))
+                        .foregroundStyle(tint)
+                }
+            }
+            if let e = ChargerEfficiency(snapshot: snapshot) {
+                // The bar is the wall draw; the colored share reached the Mac, the rest is heat
+                GeometryReader { geo in
+                    HStack(spacing: 2) {
+                        Capsule().fill(Theme.input).frame(width: max(4, geo.size.width * e.efficiency - 1))
+                        Capsule().fill(Theme.warning.opacity(0.8))
+                    }
+                }
+                .frame(height: 8)
+                StatRow(label: "From the wall, est.", value: Units.watts(e.wallWatts))
+                StatRow(label: "Delivered to the Mac", value: Units.watts(e.deliveredWatts), tint: Theme.input)
+                StatRow(label: "Lost as heat", value: Units.watts(e.lossWatts), tint: Theme.warning)
+                Text("Excellent is 94% or more, typical of good GaN chargers; good is 90%, fair 85%. The loss is macOS's own estimate.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text(snapshot.isExternalPower
+                     ? "Not rated below \(Int(ChargerEfficiency.minimumRatedWatts)) W, where every charger is least efficient."
+                     : "Plug in a charger to rate it.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 }

@@ -8,7 +8,7 @@ public enum MetricTone: String, Sendable {
 /// A reading the user can pin to the menu bar. Power, volts and amps follow the live bus:
 /// the charger input when plugged in, the battery pack when not.
 public enum MenuBarMetric: String, CaseIterable, Codable, Identifiable, Sendable {
-    case watts, volts, amps, systemWatts, batteryWatts, wallWatts, chargerLoad
+    case watts, volts, amps, systemWatts, batteryWatts, wallWatts, adapterLoss, chargerLoad
     case percent, time, temperature, health, energyMode, peripherals
 
     /// Wall draw, Mac use, charger load and percent; the two charger readings drop out on battery.
@@ -23,6 +23,7 @@ public enum MenuBarMetric: String, CaseIterable, Codable, Identifiable, Sendable
         case .systemWatts: return "Mac uses"
         case .batteryWatts: return "Battery power"
         case .wallWatts: return "From the wall"
+        case .adapterLoss: return "Charger loss"
         case .chargerLoad: return "Charger load"
         case .percent: return "Battery percent"
         case .time: return "Time to full or empty"
@@ -40,6 +41,7 @@ public enum MenuBarMetric: String, CaseIterable, Codable, Identifiable, Sendable
         case .systemWatts: return "What the Mac itself is using"
         case .batteryWatts: return "Plus while charging, minus while draining"
         case .wallWatts: return "Charger input plus its conversion loss"
+        case .adapterLoss: return "Watts the charger turns into heat: from the wall minus power in"
         case .chargerLoad: return "Share of the charger's limit in use"
         case .energyMode: return "Shown only when Low or High Power is on"
         case .peripherals: return "Power the Mac allocated to USB devices, shown when any are plugged in"
@@ -58,6 +60,7 @@ public enum MenuBarMetric: String, CaseIterable, Codable, Identifiable, Sendable
             let w = abs(s.batteryWatts) < 0.05 ? 0 : s.batteryWatts
             return (w < 0 ? Units.minus : "+") + String(format: "%.1fW", abs(w))
         case .wallWatts: return s.wallWatts.map { String(format: "%.1fW", $0) }
+        case .adapterLoss: return s.adapterLossWatts.flatMap { $0 > 0 ? String(format: "%.1fW", $0) : nil }
         case .chargerLoad: return s.chargerLoad.map { String(format: "%.0f%%", $0 * 100) }
         case .percent: return "\(s.percent)%"
         case .time: return (s.minutesToFull ?? s.minutesToEmpty).map(Units.clock(minutes:))
@@ -75,6 +78,7 @@ public enum MenuBarMetric: String, CaseIterable, Codable, Identifiable, Sendable
         case .systemWatts: return .system
         case .batteryWatts: return s.batteryWatts < -0.05 ? .draining : .charging
         case .wallWatts: return .input
+        case .adapterLoss: return .neutral
         case .chargerLoad:
             guard let load = s.chargerLoad else { return .neutral }
             return load >= 0.9 ? .warning : load >= 0.75 ? .draining : .input

@@ -21,11 +21,25 @@ enum StatusItemRenderer {
             return
         }
         let readings = settings.metrics.filter { $0.text(for: s) != nil }
-        button.image = image(readings, snapshot: s, settings: settings)
+        let rendered = render(readings, snapshot: s, settings: settings)
+        button.image = rendered.image
+        StatusToolTips.shared.install(on: button, segments: rendered.segments,
+                                      imageSize: rendered.image.size, snapshot: s)
         button.setAccessibilityLabel("Wattsup, \(s.statusLine), \(MenuBarMetric.line(readings, for: s))")
     }
 
+    /// Where one reading, or the icon when `metric` is nil, sits inside the drawn image.
+    struct Segment: Equatable {
+        var metric: MenuBarMetric?
+        var rect: CGRect
+    }
+
     static func image(_ readings: [MenuBarMetric], snapshot s: PowerSnapshot, settings: AppSettings) -> NSImage {
+        render(readings, snapshot: s, settings: settings).image
+    }
+
+    static func render(_ readings: [MenuBarMetric], snapshot s: PowerSnapshot,
+                       settings: AppSettings) -> (image: NSImage, segments: [Segment]) {
         let stacked = settings.layout == .stacked && readings.count > 1
         let fontSize: CGFloat = stacked ? 9 : 12
         let rows = (stacked ? MenuBarMetric.rows(readings) : [readings]).map { row in
@@ -51,6 +65,23 @@ enum StatusItemRenderer {
         let iconWidth = symbol.map { ceil($0.size.width) + (readings.isEmpty ? 0 : gap) } ?? 0
         let inset = outlined ? padding : 0
         let size = NSSize(width: inset * 2 + iconWidth + textWidth, height: height)
+        let lineHeight = rows.first?.first?.size().height ?? 12
+        let rowMetrics = stacked ? MenuBarMetric.rows(readings) : [readings]
+
+        // Hover regions mirror the drawing below: the icon, then each reading's column
+        var segments: [Segment] = []
+        if symbol != nil { segments.append(Segment(metric: nil, rect: CGRect(x: 0, y: 0, width: inset + iconWidth, height: height))) }
+        for (r, row) in rowMetrics.enumerated() {
+            var cx = inset + iconWidth
+            let rowRect = stacked ? (r == 0 ? CGRect(x: 0, y: 11, width: 0, height: 11) : CGRect(x: 0, y: 0, width: 0, height: 11))
+                                  : CGRect(x: 0, y: 0, width: 0, height: height)
+            for (i, metric) in row.enumerated() where i < columnWidths.count {
+                let w = columnWidths[i] + (i < columnWidths.count - 1 ? gap : 0)
+                segments.append(Segment(metric: metric, rect: CGRect(x: cx - (i > 0 ? gap : 0), y: rowRect.minY,
+                                                                     width: w + (i > 0 ? gap : 0), height: rowRect.height)))
+                cx += columnWidths[i] + gap * 2 + 1
+            }
+        }
 
         let image = NSImage(size: size, flipped: false) { _ in
             if outlined {
@@ -68,7 +99,6 @@ enum StatusItemRenderer {
                 symbol.draw(in: NSRect(x: x, y: (height - sz.height) / 2, width: sz.width, height: sz.height))
                 x += iconWidth
             }
-            let lineHeight = rows.first?.first?.size().height ?? 12
             for (r, row) in rows.enumerated() {
                 let y = stacked ? (r == 0 ? 10.5 : 1.5) : (height - lineHeight) / 2
                 var cx = x
@@ -87,7 +117,7 @@ enum StatusItemRenderer {
         }
         // Template only when nothing is colored, so plain mode adapts to any menu bar
         image.isTemplate = !settings.usesColors
-        return image
+        return (image, segments)
     }
 
     static func icon(for s: PowerSnapshot, style: MenuBarIcon, colored: Bool) -> NSImage? {
@@ -105,5 +135,42 @@ enum StatusItemRenderer {
         guard colored else { return base }
         return base?.withSymbolConfiguration(
             NSImage.SymbolConfiguration(paletteColors: [color(s.symbolTone, colored: true)]))
+    }
+}
+
+/// One tooltip per reading in the status item, so hovering a number names it. Regions are
+/// rebuilt only when the layout changes; the text is looked up live when the tip appears.
+@MainActor
+final class StatusToolTips: NSObject, NSViewToolTipOwner {
+    static let shared = StatusToolTips()
+    private var segments: [StatusItemRenderer.Segment] = []
+    private var snapshot: PowerSnapshot?
+    private var layoutKey = ""
+
+    func install(on button: NSView, segments: [StatusItemRenderer.Segment], imageSize: NSSize, snapshot: PowerSnapshot) {
+        self.snapshot = snapshot
+        let key = "\(segments.map { "\($0.metric?.rawValue ?? "icon")@\(Int($0.rect.minX)),\(Int($0.rect.minY)),\(Int($0.rect.width))" })\(button.bounds.size)"
+        guard key != layoutKey else { return }
+        layoutKey = key
+        self.segments = segments
+        button.removeAllToolTips()
+        let ox = (button.bounds.width - imageSize.width) / 2
+        let oy = (button.bounds.height - imageSize.height) / 2
+        for (i, segment) in segments.enumerated() {
+            var rect = segment.rect.offsetBy(dx: ox, dy: oy)
+            if button.isFlipped { rect.origin.y = button.bounds.height - rect.maxY }
+            button.addToolTip(rect, owner: self, userData: UnsafeMutableRawPointer(bitPattern: i + 1))
+        }
+    }
+
+    nonisolated func view(_ view: NSView, stringForToolTip tag: NSView.ToolTipTag,
+                          point: NSPoint, userData data: UnsafeMutableRawPointer?) -> String {
+        MainActor.assumeIsolated {
+            let index = Int(bitPattern: data) - 1
+            guard let s = snapshot, segments.indices.contains(index) else { return "Wattsup" }
+            guard let metric = segments[index].metric else { return "Wattsup: \(s.statusLine)" }
+            let value = metric.text(for: s) ?? "n/a"
+            return metric.help.isEmpty ? "\(metric.title): \(value)" : "\(metric.title): \(value)\n\(metric.help)"
+        }
     }
 }

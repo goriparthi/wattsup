@@ -13,7 +13,15 @@ public struct ChargerRecord: Codable, Equatable, Identifiable, Sendable {
     public var peakInputWatts: Double
     public var peakDemandWatts: Double
     public var lastVerdict: String?
+    /// Running efficiency average over rated readings; optional so older logs still decode.
+    public var efficiencyTotal: Double?
+    public var efficiencyCount: Int?
     public var id: String { fingerprint }
+
+    public var averageEfficiency: Double? {
+        guard let total = efficiencyTotal, let count = efficiencyCount, count > 0 else { return nil }
+        return total / Double(count)
+    }
 
     public var peakLoad: Double? {
         guard let ceilingWatts, ceilingWatts > 0 else { return nil }
@@ -43,7 +51,9 @@ public struct ChargerLog: Codable, Equatable, Sendable {
                 ceilingWatts: adapter.ceilingWatts, profiles: adapter.profiles,
                 firstSeen: s.date, lastSeen: s.date, secondsConnected: 0,
                 peakInputWatts: s.inputWatts ?? 0, peakDemandWatts: s.demandWatts,
-                lastVerdict: verdict))
+                lastVerdict: verdict,
+                efficiencyTotal: ChargerEfficiency(snapshot: s)?.efficiency,
+                efficiencyCount: ChargerEfficiency(snapshot: s) == nil ? nil : 1))
             return
         }
         var r = records[i]
@@ -54,6 +64,10 @@ public struct ChargerLog: Codable, Equatable, Sendable {
         r.peakInputWatts = max(r.peakInputWatts, s.inputWatts ?? 0)
         r.peakDemandWatts = max(r.peakDemandWatts, s.demandWatts)
         if let verdict { r.lastVerdict = verdict }
+        if let e = ChargerEfficiency(snapshot: s) {
+            r.efficiencyTotal = (r.efficiencyTotal ?? 0) + e.efficiency
+            r.efficiencyCount = (r.efficiencyCount ?? 0) + 1
+        }
         records[i] = r
     }
 

@@ -37,6 +37,7 @@ public struct Peripheral: Identifiable, Equatable, Sendable {
         if n.contains("iphone") { return "iphone" }
         if n.contains("ipad") { return "ipad" }
         if n.contains("watch") { return "applewatch" }
+        if n.contains("charging case") { return "airpodspro.chargingcase.wireless.fill" }
         if n.contains("airpods") { return "airpods" }
         if n.contains("keyboard") { return "keyboard" }
         if n.contains("mouse") || n.contains("trackpad") { return "computermouse" }

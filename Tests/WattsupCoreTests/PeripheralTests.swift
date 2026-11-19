@@ -13,6 +13,9 @@ final class PeripheralTests: XCTestCase {
         XCTAssertEqual(p.name, "iPhone")
         XCTAssertEqual(p.allocatedWatts, 12, accuracy: 0.001)
         XCTAssertEqual(p.symbolName, "iphone")
+        var case_ = iPhone
+        case_["USB Product Name"] = "MagSafe Charging Case (USB-C)"
+        XCTAssertEqual(Peripheral(registry: case_)?.symbolName, "airpodspro.chargingcase.wireless.fill")
     }
 
     func testDeviceWithoutAllocationIsSkipped() {
