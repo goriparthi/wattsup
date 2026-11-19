@@ -30,11 +30,41 @@ final class ChargerTests: XCTestCase {
         XCTAssertTrue(a.advisories.contains { $0.contains("lighter 30 W") }, "\(a.advisories)")
     }
 
-    func testTooFewSamplesKeepsMeasuring() {
+    func testFirstSecondsAfterPluggingInAreNegotiation() {
+        var h = PowerHistory()
+        for i in 0..<5 { h.append(Fixture.snapshot(Fixture.discharging(), at: Double(i) * 2)) }
         let d = Fixture.charging()
-        let a = ChargerAssessment(snapshot: Fixture.snapshot(d, at: 1000),
-                                  history: Fixture.history(d, count: 5))
-        XCTAssertEqual(a.verdict, .measuring)
+        for i in 5..<10 { h.append(Fixture.snapshot(d, at: Double(i) * 2)) }
+        let a = ChargerAssessment(snapshot: Fixture.snapshot(d, at: 18), history: h)
+        XCTAssertEqual(a.verdict, .negotiating, "8 s after plugging in")
+        XCTAssertFalse(a.verdict.isSettled)
+    }
+
+    func testChargerAlreadyInAtLaunchSkipsNegotiation() {
+        let d = Fixture.charging()
+        let a = ChargerAssessment(snapshot: Fixture.snapshot(d, at: 1000), history: Fixture.history(d, count: 5))
+        XCTAssertEqual(a.verdict, .measuring, "connected before Wattsup started, so no negotiation to wait for")
+    }
+
+    func testRampDuringNegotiationIsNeverJudged() {
+        // On battery, then plugged in: battery still draining as input ramps, then charging normally
+        var h = PowerHistory()
+        h.append(Fixture.snapshot(Fixture.discharging(), at: -2))
+        for i in 0..<10 { h.append(Fixture.snapshot(Fixture.charging(input: 9000, battery: -900, load: 20000), at: Double(i) * 2)) }
+        let good = Fixture.charging(input: 30000, battery: 800, load: 20000)
+        for i in 10..<40 { h.append(Fixture.snapshot(good, at: Double(i) * 2)) }
+        let a = ChargerAssessment(snapshot: Fixture.snapshot(good, at: 78), history: h)
+        XCTAssertNotEqual(a.verdict, .notKeepingUp)
+        XCTAssertEqual(a.verdict, .headroom)
+    }
+
+    func testTooFewSettledSamplesKeepsMeasuring() {
+        var h = PowerHistory()
+        h.append(Fixture.snapshot(Fixture.discharging(), at: -2))
+        let d = Fixture.charging()
+        for i in 0..<16 { h.append(Fixture.snapshot(d, at: Double(i) * 2)) }
+        let a = ChargerAssessment(snapshot: Fixture.snapshot(d, at: 30), history: h)
+        XCTAssertEqual(a.verdict, .measuring, "30 s in, only 5 readings after negotiation")
     }
 
     func testUnplugged() {

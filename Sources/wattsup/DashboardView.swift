@@ -64,7 +64,7 @@ struct DashboardView: View {
             BatteryTank(snapshot: s, width: 54, height: 86)
             VStack(alignment: .leading, spacing: 4) {
                 Text("\(s.percent)%")
-                    .font(.system(size: 40, weight: .semibold, design: .rounded))
+                    .font(.system(size: 36, weight: .semibold))
                     .monospacedDigit()
                 HStack(spacing: 8) {
                     Text(s.statusLine).font(.title3).foregroundStyle(Theme.secondaryText)
@@ -172,7 +172,7 @@ struct HeroStat: View {
         VStack(alignment: .leading, spacing: 3) {
             Text(title).font(.caption).foregroundStyle(Theme.secondaryText)
             Text(value)
-                .font(.system(.title2, design: .rounded).weight(.semibold))
+                .font(.title2.weight(.semibold))
                 .monospacedDigit()
                 .foregroundStyle(tint == .secondary ? .primary : tint)
             Text(detail).font(.caption.monospacedDigit()).foregroundStyle(Theme.secondaryText)

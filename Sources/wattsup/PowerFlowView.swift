@@ -98,9 +98,8 @@ struct PowerFlowView: View {
                        style: StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [3, 5]))
             return
         }
-        let width = (large ? 5 : 3.5) + min(large ? 12 : 7, link.watts / (large ? 6 : 9))
-        ctx.stroke(path, with: .color(link.tint.opacity(0.18)), style: StrokeStyle(lineWidth: width, lineCap: .round))
-        ctx.stroke(path, with: .color(link.tint.opacity(0.55)), style: StrokeStyle(lineWidth: max(1.5, width * 0.28), lineCap: .round))
+        let width = (large ? 3 : 2.5) + min(large ? 5 : 3.5, link.watts / (large ? 14 : 20))
+        ctx.stroke(path, with: .color(link.tint.opacity(0.28)), style: StrokeStyle(lineWidth: width, lineCap: .round))
 
         let dx = link.to.x - link.from.x, dy = link.to.y - link.from.y
         let length = max(1, hypot(dx, dy))
@@ -109,37 +108,18 @@ struct PowerFlowView: View {
                       angle: atan2(dy, dx), tint: link.tint, in: &ctx)
             return
         }
-        // A fixed particle count keeps motion steady; the watts set speed, size and glow instead
-        let count = 7
-        let intensity = min(1, 0.35 + link.watts / 60)
-        let speed = (0.25 + min(1.6, link.watts / 45)) * (140 / length)
+        // Small evenly spaced dots in the line's color; the watts set their speed
+        let count = 6
+        let speed = (0.2 + min(1.2, link.watts / 50)) * (140 / length)
         let base = clock.phase(key, speed: speed)
-        let r = width * (0.3 + 0.15 * intensity)
-        let tail = min(0.12, 18 / length)
-
-        func point(_ p: Double) -> CGPoint { CGPoint(x: link.from.x + dx * p, y: link.from.y + dy * p) }
-        func fade(_ p: Double) -> Double { sin(.pi * min(1, max(0, p))) }
-
-        ctx.drawLayer { layer in
-            layer.addFilter(.blur(radius: large ? 2.5 : 1.8))
-            for i in 0..<count {
-                let p = (base + Double(i) / Double(count)).truncatingRemainder(dividingBy: 1)
-                // Comet tail: a short streak behind each particle, fading toward its end
-                var streak = Path()
-                streak.move(to: point(max(0, p - tail)))
-                streak.addLine(to: point(p))
-                layer.stroke(streak, with: .color(link.tint.opacity(0.6 * fade(p) * intensity)),
-                             style: StrokeStyle(lineWidth: r * 1.4, lineCap: .round))
-                let pt = point(p)
-                layer.fill(Path(ellipseIn: CGRect(x: pt.x - r, y: pt.y - r, width: r * 2, height: r * 2)),
-                           with: .color(link.tint.opacity(fade(p))))
-            }
-        }
+        let r = max(1.6, width * 0.22)
         for i in 0..<count {
             let p = (base + Double(i) / Double(count)).truncatingRemainder(dividingBy: 1)
-            let pt = point(p), core = r * 0.42
-            ctx.fill(Path(ellipseIn: CGRect(x: pt.x - core, y: pt.y - core, width: core * 2, height: core * 2)),
-                     with: .color(.white.opacity(0.9 * fade(p))))
+            // Fade at both ends so dots never pop in or out at a node
+            let alpha = sin(.pi * p)
+            let pt = CGPoint(x: link.from.x + dx * p, y: link.from.y + dy * p)
+            ctx.fill(Path(ellipseIn: CGRect(x: pt.x - r, y: pt.y - r, width: r * 2, height: r * 2)),
+                     with: .color(link.tint.opacity(alpha)))
         }
     }
 
@@ -204,14 +184,12 @@ private struct FlowNodeBadge: View {
                 let ringWidth: CGFloat = layout.large ? 4 : 3
                 let inset: CGFloat = ring == nil ? 0 : ringWidth + 3
                 Group {
-                    Circle()
-                        .fill(RadialGradient(colors: [tint.opacity(active ? 0.45 : 0.12), tint.opacity(active ? 0.12 : 0.04)],
-                                             center: .center, startRadius: 0, endRadius: r))
-                    Circle().strokeBorder(tint.opacity(active ? 0.8 : 0.25), lineWidth: 1.5)
+                    Circle().fill(Theme.surface)
+                    Circle().strokeBorder(active ? tint : Theme.hairline, lineWidth: 1.5)
                 }
                 .padding(inset)
                 if let ring {
-                    Circle().stroke(tint.opacity(0.2), lineWidth: ringWidth).padding(ringWidth / 2)
+                    Circle().stroke(Theme.hairline, lineWidth: ringWidth).padding(ringWidth / 2)
                     Circle()
                         .trim(from: 0, to: ring)
                         .stroke(tint, style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
@@ -219,13 +197,12 @@ private struct FlowNodeBadge: View {
                         .padding(ringWidth / 2)
                 }
                 Image(systemName: symbol)
-                    .font(.system(size: r * (ring == nil ? 0.72 : 0.6), weight: .semibold))
-                    .foregroundStyle(active ? tint : .secondary)
+                    .font(.system(size: r * (ring == nil ? 0.62 : 0.52), weight: .medium))
+                    .foregroundStyle(active ? tint : Theme.secondaryText)
             }
             .frame(width: r * 2, height: r * 2)
-            .shadow(color: active ? tint.opacity(0.55) : .clear, radius: layout.large ? 12 : 7)
             Text(value)
-                .font(.system(layout.large ? .title3 : .callout, design: .rounded).weight(.semibold))
+                .font((layout.large ? Font.title3 : .callout).weight(.semibold))
                 .monospacedDigit()
                 .contentTransition(.numericText())
                 .animation(.smooth(duration: 0.6), value: value)
@@ -248,14 +225,10 @@ private struct WattBadge: View {
 
     var body: some View {
         Text(text)
-            .font(.system(large ? .caption : .caption2, design: .monospaced).weight(.semibold))
+            .font((large ? Font.caption : .caption2).weight(.medium).monospacedDigit())
             .contentTransition(.numericText())
             .animation(.smooth(duration: 0.6), value: text)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(Capsule().fill(.background.opacity(0.85)))
-            .overlay(Capsule().strokeBorder(tint.opacity(0.6), lineWidth: 1))
-            .foregroundStyle(tint)
+            .foregroundStyle(Theme.secondaryText)
     }
 }
 

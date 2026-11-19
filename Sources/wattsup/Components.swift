@@ -22,7 +22,7 @@ enum Theme {
         switch v {
         case .bottleneck, .notKeepingUp: return warning
         case .headroom: return charging
-        case .measuring, .unplugged: return .secondary
+        case .measuring, .unplugged, .negotiating: return .secondary
         }
     }
 
@@ -38,12 +38,7 @@ struct Card<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label {
-                Text(title)
-            } icon: {
-                Image(systemName: symbol).foregroundStyle(Theme.accent)
-            }
-            .font(.headline)
+            Text(title).font(.headline)
             content
         }
         .padding(14)
@@ -82,6 +77,7 @@ struct VerdictBanner: View {
         case .notKeepingUp: return "exclamationmark.triangle.fill"
         case .headroom: return "checkmark.seal.fill"
         case .measuring: return "hourglass"
+        case .negotiating: return "arrow.triangle.2.circlepath"
         case .unplugged: return "battery.100percent"
         }
     }
@@ -108,8 +104,16 @@ struct VerdictBanner: View {
             }
         }
         .padding(12)
+        .padding(.leading, 3)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(tint.opacity(0.1)))
+        // Neutral panel with a thin status edge, instead of a tinted block
+        .background(alignment: .leading) {
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.primary.opacity(0.04))
+                Rectangle().fill(tint).frame(width: 3)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
     }
 }
 

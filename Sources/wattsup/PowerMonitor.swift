@@ -82,8 +82,7 @@ final class PowerMonitor {
                 if let first = archive.firstIndex(where: { $0.date >= cutoff }), first > 0 { archive.removeFirst(first) }
             }
             let a = ChargerAssessment(snapshot: s, history: history, known: chargers.records)
-            let settled = a.verdict != .measuring && a.verdict != .unplugged
-            chargers.record(s, verdict: settled ? a.headline : nil)
+            chargers.record(s, verdict: a.verdict.isSettled ? a.headline : nil)
             trackDropouts(from: snapshot, to: s)
             updateQuality(s)
             logTransitions(from: snapshot, to: s, verdict: a)
@@ -137,7 +136,7 @@ final class PowerMonitor {
             if ChargerAssessment.looksCableCapped(a) { log.info("Charger menu stops at 20 V 3 A; cable likely limits it to 60 W") }
         }
         if old?.state != s.state { log.info("State: \(s.state.title) at \(s.percent)%") }
-        if verdict.verdict != assessment?.verdict, verdict.verdict != .measuring {
+        if verdict.verdict != assessment?.verdict, verdict.verdict.isSettled || verdict.verdict == .negotiating {
             log.info("Charger check: \(verdict.headline). \(verdict.detail)")
         }
         if old?.peripherals.map(\.name) != s.peripherals.map(\.name) {

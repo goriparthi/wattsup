@@ -3,7 +3,10 @@ import Foundation
 /// Judges whether the connected charger is limiting the Mac, from measured samples only.
 public struct ChargerAssessment: Equatable, Sendable {
     public enum Verdict: String, Equatable, Sendable {
-        case unplugged, measuring, bottleneck, notKeepingUp, headroom
+        case unplugged, negotiating, measuring, bottleneck, notKeepingUp, headroom
+
+        /// Phases that are not a judgement yet, so they are never logged or saved as one.
+        public var isSettled: Bool { self != .unplugged && self != .negotiating && self != .measuring }
     }
 
     public var verdict: Verdict
@@ -45,8 +48,21 @@ public struct ChargerAssessment: Equatable, Sendable {
         ceilingWatts = ceiling
         loadNow = s.chargerLoad
 
+        // Readings from the negotiation window right after plugging in are never judged:
+        // input ramps up and the battery current lags, which would read as can't keep up
+        // Nil when the charger was already in before Wattsup started watching: nothing to wait for
+        let connected = Self.connectedSince(history, fingerprint: adapter.fingerprint, now: s.date)
+        if let connected, s.date.timeIntervalSince(connected) < Self.negotiationSeconds {
+            verdict = .negotiating
+            ceilingWatts = adapter.ceilingWatts
+            headline = "Negotiating with the charger"
+            detail = "The Mac and charger are agreeing on a power level. The check starts once it settles."
+            advisories = []
+            return
+        }
+        let settledFrom = connected?.addingTimeInterval(Self.negotiationSeconds) ?? .distantPast
         let samples = history.recent(window, from: s.date)
-            .filter { $0.isExternalPower && $0.adapterFingerprint == adapter.fingerprint }
+            .filter { $0.isExternalPower && $0.adapterFingerprint == adapter.fingerprint && $0.date >= settledFrom }
         let lastMinute = samples.filter { $0.date >= s.date.addingTimeInterval(-60) }
         let peakDemand = samples.map(\.demandWatts).max() ?? s.demandWatts
         peakDemandWatts = peakDemand
@@ -168,6 +184,21 @@ public struct ChargerAssessment: Equatable, Sendable {
         guard let best = adapter.bestProfile, !adapter.isWireless else { return false }
         let maxAmps = adapter.profiles.map(\.amps).max() ?? 0
         return abs(best.volts - 20) < 0.1 && abs(maxAmps - 3) < 0.01 && abs(best.amps - 3) < 0.01
+    }
+
+    static let negotiationSeconds: TimeInterval = 20
+
+    /// When this charger was plugged in, if Wattsup saw it happen: the start of the unbroken
+    /// run of readings on it, provided something else came before. Nil if the run reaches back
+    /// to the start of the history, meaning it was connected before Wattsup was watching.
+    static func connectedSince(_ history: PowerHistory, fingerprint: String, now: Date) -> Date? {
+        var start = now
+        for sample in history.samples.reversed() where sample.date <= now {
+            guard sample.isExternalPower, sample.adapterFingerprint == fingerprint,
+                  start.timeIntervalSince(sample.date) <= 10 else { return start }
+            start = sample.date
+        }
+        return nil
     }
 
     static func median(_ values: [Double]) -> Double {

@@ -38,7 +38,7 @@ struct PopoverView: View {
             BatteryTank(snapshot: s, width: 34, height: 52)
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(s.percent)%")
-                    .font(.system(size: 26, weight: .semibold, design: .rounded))
+                    .font(.system(size: 26, weight: .semibold))
                     .monospacedDigit()
                 HStack(spacing: 6) {
                     Text(s.statusLine).font(.callout).foregroundStyle(Theme.secondaryText)
@@ -53,7 +53,7 @@ struct PopoverView: View {
     private func details(_ s: PowerSnapshot) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             if let adapter = s.adapter {
-                DetailGroup(title: "Charger", symbol: "powerplug.fill", tint: Theme.input) {
+                DetailGroup(title: "Charger") {
                     StatRow(label: "Charger", value: adapter.title)
                     if let e = ChargerEfficiency(snapshot: s) {
                         StatRow(label: "Efficiency", value: e.summary, tint: Color(Brand.color(e.grade.tone)))
@@ -69,12 +69,12 @@ struct PopoverView: View {
                 }
                 Divider()
             }
-            DetailGroup(title: "Battery", symbol: "battery.75percent", tint: Theme.charging) {
+            DetailGroup(title: "Battery") {
                 StatRow(label: "Health", value: Units.percent(s.health, digits: 1))
                 StatRow(label: "Temperature", value: Units.celsius(s.temperatureC))
             }
             Divider()
-            DetailGroup(title: "Mac", symbol: "laptopcomputer", tint: Theme.system) {
+            DetailGroup(title: "Mac") {
                 if !s.peripherals.isEmpty {
                     StatRow(label: "Powering", value: s.peripherals.map(\.name).joined(separator: ", ")
                             + ", up to " + Units.watts(s.peripherals.allocatedWatts, digits: 0), tint: Theme.system)
@@ -147,16 +147,13 @@ struct UnavailableView: View {
 
 private struct DetailGroup<Content: View>: View {
     let title: String
-    let symbol: String
-    let tint: Color
     @ViewBuilder var content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Label(title, systemImage: symbol)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(tint)
-                .textCase(.uppercase)
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
             content
         }
     }

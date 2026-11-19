@@ -1,8 +1,8 @@
 import SwiftUI
 import WattsupCore
 
-/// The battery as a tank of liquid: the level is the charge, the surface moves, bubbles rise
-/// while charging and drops fall while draining, faster the more watts flow.
+/// The battery as a level gauge: the fill is the charge, and a gentle surface moves while
+/// power flows, faster the more watts move in or out.
 struct BatteryTank: View {
     let snapshot: PowerSnapshot
     var width: CGFloat = 56
@@ -46,8 +46,7 @@ struct BatteryTank: View {
         let speed = min(3, 0.6 + abs(watts) / 20)
         // Accumulated, so the motion speeds up or slows down instead of jumping when watts change
         let wavePhase = clock.value("wave", speed: speed * 2)
-        let bubblePhase = clock.value("bubbles", speed: speed * 0.35)
-        let amplitude = flowing ? max(1.5, size.height * 0.03) : 1
+        let amplitude = flowing ? max(1, size.height * 0.015) : 0.5
         let surface = size.height * (1 - level)
 
         var back = Path(), front = Path()
@@ -63,23 +62,7 @@ struct BatteryTank: View {
             if path == 0 { back = p } else { front = p }
         }
         ctx.fill(back, with: .color(tint.opacity(0.35)))
-        ctx.fill(front, with: .linearGradient(
-            Gradient(colors: [tint.opacity(0.95), tint.opacity(0.7)]),
-            startPoint: CGPoint(x: 0, y: surface), endPoint: CGPoint(x: 0, y: size.height)))
+        ctx.fill(front, with: .color(tint.opacity(0.85)))
 
-        guard flowing, level > 0.04 else { return }
-        let liquidHeight = size.height - surface
-        for i in 0..<6 {
-            let seed = Double(i) * 0.618
-            let x = size.width * (0.15 + 0.7 * (seed.truncatingRemainder(dividingBy: 1)))
-            let progress = (bubblePhase + seed).truncatingRemainder(dividingBy: 1)
-            let r = 1.5 + Double(i % 3)
-            // Charging: bubbles rise to the surface. Draining: drops fall from it.
-            let y = watts > 0
-                ? size.height - progress * liquidHeight
-                : surface + progress * liquidHeight
-            let dot = Path(ellipseIn: CGRect(x: x - r, y: y - r, width: r * 2, height: r * 2))
-            ctx.fill(dot, with: .color(.white.opacity(0.35 * (1 - progress) + 0.1)))
-        }
     }
 }
