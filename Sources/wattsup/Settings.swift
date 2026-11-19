@@ -27,6 +27,7 @@ final class AppSettings {
     private enum Key {
         static let metrics = "menuBarMetrics", order = "menuBarOrder", icon = "menuBarIcon", colors = "menuBarColors"
         static let layout = "menuBarLayout", autoUpdate = "checksForUpdates", outlined = "menuBarOutlined"
+        static let alerts = "alerts", chargedLevel = "chargedAlertLevel"
     }
     private let defaults: UserDefaults
 
@@ -51,6 +52,8 @@ final class AppSettings {
     var outlined: Bool { didSet { defaults.set(outlined, forKey: Key.outlined) } }
     var layout: MenuBarLayout { didSet { defaults.set(layout.rawValue, forKey: Key.layout) } }
     var checksForUpdates: Bool { didSet { defaults.set(checksForUpdates, forKey: Key.autoUpdate) } }
+    var alerts: Set<AlertKind> { didSet { defaults.set(alerts.map(\.rawValue).sorted(), forKey: Key.alerts) } }
+    var chargedAlertLevel: Int { didSet { defaults.set(chargedAlertLevel, forKey: Key.chargedLevel) } }
 
     private(set) var launchesAtLogin = SMAppService.mainApp.status == .enabled
     private(set) var loginItemError: String?
@@ -67,6 +70,9 @@ final class AppSettings {
         outlined = defaults.object(forKey: Key.outlined) as? Bool ?? true
         layout = defaults.string(forKey: Key.layout).flatMap(MenuBarLayout.init) ?? .line
         checksForUpdates = defaults.object(forKey: Key.autoUpdate) as? Bool ?? true
+        alerts = (defaults.array(forKey: Key.alerts) as? [String]).map { Set($0.compactMap(AlertKind.init)) }
+            ?? Set(AlertKind.allCases.filter(\.enabledByDefault))
+        chargedAlertLevel = defaults.object(forKey: Key.chargedLevel) as? Int ?? 80
     }
 
     /// Showing or hiding a reading never moves it; its place in the order is kept.

@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var updates = UpdateController(settings: settings)
     private var settingsWindow: NSWindow?
     private let visibility = MenuBarVisibility()
+    private lazy var alerts = AlertCenter(settings: settings)
     private var statusItem: NSStatusItem!
     private let popover = NSPopover()
     private var dashboard: NSWindow?
@@ -34,7 +35,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hosting.sizingOptions = [.preferredContentSize]
         popover.contentViewController = hosting
 
-        monitor.onUpdate = { [weak self] in self?.updateStatusItem() }
+        monitor.onUpdate = { [weak self] in
+            guard let self else { return }
+            self.updateStatusItem()
+            self.alerts.evaluate(self.monitor.snapshot, self.monitor.assessment)
+        }
+        alerts.start()
         monitor.start()
         observeSettings()
         updates.start()

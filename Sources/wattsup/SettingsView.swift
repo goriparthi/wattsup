@@ -51,6 +51,29 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundStyle(Theme.secondaryText)
             }
+            Section {
+                ForEach(AlertKind.allCases) { kind in
+                    HStack {
+                        Toggle(kind.title, isOn: Binding(
+                            get: { settings.alerts.contains(kind) },
+                            set: { on in if on { settings.alerts.insert(kind) } else { settings.alerts.remove(kind) } }))
+                        if kind == .chargedTo {
+                            Spacer()
+                            Stepper("\(settings.chargedAlertLevel)%", value: Binding(
+                                get: { settings.chargedAlertLevel }, set: { settings.chargedAlertLevel = $0 }),
+                                    in: 50...100, step: 5)
+                                .fixedSize()
+                                .disabled(!settings.alerts.contains(kind))
+                        }
+                    }
+                }
+            } header: {
+                Text("Notifications")
+            } footer: {
+                Text("Each alert fires once when the situation starts, then waits at least 30 minutes before repeating.")
+                    .font(.caption)
+                    .foregroundStyle(Theme.secondaryText)
+            }
             Section("General") {
                 Toggle("Open at login", isOn: Binding(get: { settings.launchesAtLogin },
                                                       set: { settings.setLaunchesAtLogin($0) }))
