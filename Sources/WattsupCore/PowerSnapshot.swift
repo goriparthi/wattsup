@@ -108,6 +108,8 @@ public struct PowerSnapshot: Equatable, Sendable {
     public var energyMode: EnergyMode? = nil
     /// USB devices the Mac is powering; filled in by the app from the USB registry.
     public var peripherals: [Peripheral] = []
+    /// Fans and chip temperatures from the SMC; nil where unavailable.
+    public var thermals: Thermals? = nil
 
     /// On battery the pack is the only source, yet for a few seconds after unplugging the
     /// current still reads as charging. Such a reading is stale, not real.

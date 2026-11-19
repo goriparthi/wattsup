@@ -12,6 +12,17 @@ case "--snapshot":
 case "--render-menubar":
     let dir = CommandLine.arguments.dropFirst(2).first ?? "dist/menubar"
     exit(MainActor.assumeIsolated { MenuBarRender.run(directory: dir) })
+case "--thermals":
+    // Prints what the SMC exposes on this Mac, for checking sensor coverage per model
+    guard let smc = SMC() else { print("AppleSMC unavailable"); exit(1) }
+    let keys = smc.allKeys()
+    let chips = keys.filter(Thermals.isChipSensor)
+    var temps: [String: Double] = [:]
+    for k in chips { temps[k] = smc.read(k) }
+    let t = Thermals.summarize(fans: smc.fans(), temperatures: temps.compactMapValues { $0 })
+    print("SMC keys: \(keys.count), chip sensors: \(chips.count)")
+    for f in t.fans { print("\(f.name(of: t.fans.count)): \(Int(f.rpm)) rpm (range \(Int(f.minRPM ?? 0)) to \(Int(f.maxRPM ?? 0)))") }
+    print(String(format: "CPU %.1f C (hottest %.1f), GPU %.1f C", t.cpuC ?? -1, t.cpuHottestC ?? -1, t.gpuC ?? -1))
 case "--diagnostics":
     Diagnostics.printReport()
 case "--help", "-h":

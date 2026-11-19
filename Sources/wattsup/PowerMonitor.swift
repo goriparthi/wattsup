@@ -26,6 +26,8 @@ final class PowerMonitor {
     @ObservationIgnored private var lastSave = Date.distantPast
     @ObservationIgnored private var lastFingerprint: String?
     @ObservationIgnored private var peripherals: [Peripheral] = []
+    @ObservationIgnored private let thermalsReader = ThermalsReader()
+    @ObservationIgnored private var thermals: Thermals?
     @ObservationIgnored private var lastDisconnect: (fingerprint: String, at: Date)?
     @ObservationIgnored private var ticksSinceQuality = 0
     @ObservationIgnored private let historyStore = HistoryStore()
@@ -70,10 +72,14 @@ final class PowerMonitor {
             // USB enumeration is heavier than the battery read, so it runs every third tick
             if ticksSincePeripheralScan >= Self.peripheralScanEvery {
                 peripherals = USBPeripherals.read()
+                thermalsReader.read { [weak self] t in
+                    DispatchQueue.main.async { self?.thermals = t }
+                }
                 ticksSincePeripheralScan = 0
             }
             ticksSincePeripheralScan += 1
             s.peripherals = peripherals
+            s.thermals = thermals
             history.append(s)
             if let minute = minutes.add(PowerSample(s)) {
                 historyStore.append(minute)

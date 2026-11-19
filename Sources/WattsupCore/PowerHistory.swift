@@ -14,6 +14,8 @@ public struct PowerSample: Identifiable, Equatable, Codable, Sendable {
     public var busAmps: Double
     public var percent: Int
     public var temperatureC: Double?
+    public var cpuTempC: Double?
+    public var fanRPM: Double?
     public var isExternalPower: Bool
     public var adapterFingerprint: String?
     public var id: Date { date }
@@ -29,6 +31,8 @@ public struct PowerSample: Identifiable, Equatable, Codable, Sendable {
         busAmps = s.busAmps
         percent = s.percent
         temperatureC = s.temperatureC
+        cpuTempC = s.thermals?.cpuC
+        fanRPM = s.thermals?.fanRPM
         isExternalPower = s.isExternalPower
         adapterFingerprint = s.adapter?.fingerprint
     }
@@ -103,6 +107,9 @@ public struct MinuteAggregator: Sendable {
         out.busAmps = mean(\.busAmps)
         let temps = b.compactMap(\.temperatureC)
         out.temperatureC = temps.isEmpty ? nil : temps.reduce(0, +) / Double(temps.count)
+        let cpu = b.compactMap(\.cpuTempC), fans = b.compactMap(\.fanRPM)
+        out.cpuTempC = cpu.isEmpty ? nil : cpu.reduce(0, +) / Double(cpu.count)
+        out.fanRPM = fans.isEmpty ? nil : fans.reduce(0, +) / Double(fans.count)
         // Covered time is the span of the readings, at most a minute
         let span = (b.last!.date.timeIntervalSince(b.first!.date)) + 2
         out.seconds = min(60, max(2, span))

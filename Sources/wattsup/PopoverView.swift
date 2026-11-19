@@ -75,6 +75,12 @@ struct PopoverView: View {
             }
             Divider()
             DetailGroup(title: "Mac", symbol: "laptopcomputer") {
+                if let t = s.thermals {
+                    if !t.fans.isEmpty {
+                        StatRow(label: "Fans", value: t.fans.map { "\(Int($0.rpm.rounded()).formatted())" }.joined(separator: " / ") + " rpm")
+                    }
+                    if let c = t.cpuC { StatRow(label: "Chip", value: Units.celsius(c)) }
+                }
                 if !s.peripherals.isEmpty {
                     StatRow(label: "Powering", value: s.peripherals.map(\.name).joined(separator: ", ")
                             + ", up to " + Units.watts(s.peripherals.allocatedWatts, digits: 0), tint: Theme.system)

@@ -9,7 +9,7 @@ public enum MetricTone: String, Sendable {
 /// the charger input when plugged in, the battery pack when not.
 public enum MenuBarMetric: String, CaseIterable, Codable, Identifiable, Sendable {
     case watts, volts, amps, systemWatts, batteryWatts, wallWatts, adapterLoss, chargerLoad
-    case percent, time, temperature, health, energyMode, peripherals
+    case percent, time, temperature, health, energyMode, peripherals, chipTemp, fanSpeed
 
     /// Shown out of the box: wall draw, charger load, Mac use and percent. The two charger
     /// readings drop out on battery, leaving Mac use and percent.
@@ -40,6 +40,8 @@ public enum MenuBarMetric: String, CaseIterable, Codable, Identifiable, Sendable
         case .health: return "Battery health"
         case .energyMode: return "Energy mode"
         case .peripherals: return "Powering accessories"
+        case .chipTemp: return "Chip temperature"
+        case .fanSpeed: return "Fan speed"
         }
     }
 
@@ -54,6 +56,8 @@ public enum MenuBarMetric: String, CaseIterable, Codable, Identifiable, Sendable
         case .chargerLoad: return "Share of the charger's limit in use"
         case .energyMode: return "Shown only when Low or High Power is on"
         case .peripherals: return "Power the Mac allocated to USB devices, shown when any are plugged in"
+        case .chipTemp: return "Average of the CPU sensors"
+        case .fanSpeed: return "The faster fan; hidden on Macs without fans"
         case .time: return "macOS's estimate; ~ marks Wattsup's own when macOS has none"
         case .percent, .temperature, .health: return ""
         }
@@ -87,6 +91,8 @@ public enum MenuBarMetric: String, CaseIterable, Codable, Identifiable, Sendable
         case .energyMode: return s.energyMode?.shortTitle
         case .peripherals:
             return s.peripherals.isEmpty ? nil : String(format: "USB %.0fW", s.peripherals.allocatedWatts)
+        case .chipTemp: return s.thermals?.cpuC.map { String(format: "%.0f°C", $0) }
+        case .fanSpeed: return s.thermals?.fanRPM.map { String(format: "%.0frpm", $0) }
         }
     }
 
@@ -108,6 +114,8 @@ public enum MenuBarMetric: String, CaseIterable, Codable, Identifiable, Sendable
         case .health: return (s.health ?? 1) < 0.8 ? .warning : .neutral
         case .energyMode: return s.energyMode == .high ? .warning : .charging
         case .peripherals: return .system
+        case .chipTemp: return (s.thermals?.cpuHottestC ?? 0) >= 95 ? .warning : .neutral
+        case .fanSpeed: return (s.thermals?.fans.compactMap(\.fraction).max() ?? 0) >= 0.8 ? .warning : .neutral
         }
     }
 

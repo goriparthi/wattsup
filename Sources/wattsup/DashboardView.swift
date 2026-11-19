@@ -55,6 +55,7 @@ struct DashboardView: View {
                     HStack(alignment: .top, spacing: 16) {
                         ChargerCard(snapshot: s, assessment: monitor.assessment, quality: monitor.quality)
                         BatteryCard(snapshot: s)
+                        if let t = s.thermals { ThermalsCard(thermals: t, batteryC: s.temperatureC) }
                     }
                     .fixedSize(horizontal: false, vertical: true)
                     ChargerHistoryCard(chargers: monitor.chargers.sorted,
@@ -108,7 +109,7 @@ struct DashboardView: View {
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
-                .frame(maxWidth: 420)
+                .frame(maxWidth: 520)
                 Spacer()
                 Picker("Range", selection: $range) {
                     ForEach(ChartRange.allCases) { Text($0.title).tag($0) }
@@ -130,6 +131,13 @@ struct DashboardView: View {
                 SeriesChart(series: [LineSeries(name: "Current", color: Theme.system,
                                                 points: samples.map { ($0.date, $0.busAmps) })],
                             unit: "A", height: 120, strideMinutes: range.stride)
+            case .thermals:
+                SeriesChart(series: [LineSeries(name: "Chip", color: Theme.warning, dash: LineSeries.Pattern.warning,
+                                                points: samples.compactMap { s in s.cpuTempC.map { (s.date, $0) } })],
+                            unit: "°C", height: 120, strideMinutes: range.stride)
+                SeriesChart(series: [LineSeries(name: "Fans", color: Theme.system, dash: LineSeries.Pattern.system,
+                                                points: samples.compactMap { s in s.fanRPM.map { (s.date, $0) } })],
+                            unit: "rpm", height: 120, strideMinutes: range.stride)
             case .battery:
                 SeriesChart(series: [LineSeries(name: "Charge", color: Theme.charging,
                                                 points: samples.map { ($0.date, Double($0.percent)) })],
@@ -146,7 +154,7 @@ struct DashboardView: View {
 }
 
 enum ChartMode: String, CaseIterable, Identifiable {
-    case power = "Power", electrical = "Volts and amps", battery = "Charge and heat"
+    case power = "Power", electrical = "Volts and amps", battery = "Charge and heat", thermals = "Thermals"
     var id: String { rawValue }
 }
 
@@ -464,5 +472,34 @@ struct GradePill: View {
             .padding(.horizontal, 8).padding(.vertical, 2)
             .background(Capsule().fill(tint.opacity(0.15)))
             .foregroundStyle(tint)
+    }
+}
+
+/// Fans and chip temperatures from the SMC, next to the power that drives them.
+struct ThermalsCard: View {
+    let thermals: Thermals
+    let batteryC: Double?
+
+    var body: some View {
+        Card(title: "Thermals", symbol: "fan") {
+            ForEach(thermals.fans) { fan in
+                VStack(alignment: .leading, spacing: 4) {
+                    StatRow(label: fan.name(of: thermals.fans.count), value: "\(Int(fan.rpm.rounded()).formatted()) rpm")
+                    if let f = fan.fraction { LoadBar(fraction: f, height: 6) }
+                }
+            }
+            if thermals.fans.isEmpty {
+                StatRow(label: "Fans", value: "None, this Mac is fanless")
+            }
+            StatRow(label: "CPU", value: thermals.cpuC.map { Units.celsius($0) } ?? "n/a",
+                    tint: (thermals.cpuHottestC ?? 0) >= 95 ? Theme.warning : nil)
+            if let hottest = thermals.cpuHottestC { StatRow(label: "Hottest core", value: Units.celsius(hottest)) }
+            if let gpu = thermals.gpuC { StatRow(label: "GPU", value: Units.celsius(gpu)) }
+            StatRow(label: "Battery", value: Units.celsius(batteryC))
+            Text("Read from the System Management Controller. More watts means more heat, and the fans follow a few seconds later.")
+                .font(.caption)
+                .foregroundStyle(Theme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }
