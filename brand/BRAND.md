@@ -24,22 +24,22 @@ C 88 55 90 54 94 54
 
 All coordinates are in points from the artboard’s top-left, with x increasing right and y increasing down. Each file is 18 × 18 pt, using pure black #000000 and transparent negative space. PNGs are 18 × 18, 36 × 36 and 54 × 54 px at 1×, 2× and 3×. SVGs preserve the construction curves. Mark the image as a template in AppKit and set its logical size to 18 × 18 pt.
 
-- Common battery case spans x=1–15 and y=4–14 with 2.5 pt outer corner radii. The transparent opening spans x=2.5–13.5 and y=5.5–12.5 with 1 pt corners, yielding a 1.5 pt shell. The right terminal spans x=15–17 and y=7–11 with 1 pt outer-right corners.
+- Common battery case spans x=1 to 15 and y=4 to 14 with 2.5 pt outer corner radii. The transparent opening spans x=2.5 to 13.5 and y=5.5 to 12.5 with 1 pt corners, yielding a 1.5 pt shell. The right terminal spans x=15 to 17 and y=7 to 11 with 1 pt outer-right corners.
 - The optical center of the case is (8, 9). The terminal extends to the right into the remaining canvas. Keep the full transparent artboard in the image set.
 
 | State | Interior geometry |
 |---|---|
-| Charging | Up arrow from x=4.5–11.5 and y=5.9–12.1. Tip at (8, 5.9). Head base y=8.8. Stem x=6.9–9.1 to y=12.1. |
-| Discharging | Down arrow reflected across y=9. Tip at (8, 12.1). Head base y=9.2. Stem x=6.9–9.1 from y=5.9. |
+| Charging | Up arrow from x=4.5 to 11.5 and y=5.9 to 12.1. Tip at (8, 5.9). Head base y=8.8. Stem x=6.9 to 9.1 to y=12.1. |
+| Discharging | Down arrow reflected across y=9. Tip at (8, 12.1). Head base y=9.2. Stem x=6.9 to 9.1 from y=5.9. |
 | Fully charged on AC | Solid 9 × 5 pt rounded rectangle at (3.5, 6.5). Radius 0.65 pt. |
 | Plugged in, held | Two 1.6 × 4.8 pt bars at (5.6, 6.6) and (8.8, 6.6). Radius 0.35 pt. Gap 1.6 pt. |
-| No battery | Filled cross centered on (8, 8.8), within x=5.25–10.75 and y=6.05–11.55. Diagonal bands are approximately 1.56 pt wide. |
+| No battery | Filled cross centered on (8, 8.8), within x=5.25 to 10.75 and y=6.05 to 11.55. Diagonal bands are approximately 1.56 pt wide. |
 
 Use state names as accessibility labels, including “Plugged in, charging on hold” and “No battery detected.” Map the full and held states from actual charge status, for example when power is present and optimized charging pauses the battery below its target.
 
 ## Logos and spacing
 
-Use Inter Variable at optical size 14. Set **Watt** at weight 750 and **sup** at weight 560. Track at −0.025 em throughout with an additional −0.055 em adjustment for W–a (−1.25 pt tracking and −2.75 pt extra W–a at 50 pt). The SVG wordmark is outlined. Use the capitalization shown.
+Use Inter Variable at optical size 14. Set **Watt** at weight 750 and **sup** at weight 560. Track at −0.025 em throughout with an additional −0.055 em adjustment for the W and a pair (−1.25 pt tracking and −2.75 pt extra on the W and a pair at 50 pt). The SVG wordmark is outlined. Use the capitalization shown.
 
 | Lockup | Composition | Minimum visible width |
 |---|---|---:|
