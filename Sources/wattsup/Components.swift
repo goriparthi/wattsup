@@ -16,6 +16,16 @@ enum Theme {
     static let secondaryText = Color(Brand.textSecondary)
     static let hairline = Color.primary.opacity(0.1)
 
+    /// Type and contrast for a context: the dashboard reads larger and brighter than the popover.
+    struct Style: Sendable {
+        var large = false
+        var body: Font { large ? .system(size: 14) : .callout }
+        var caption: Font { large ? .system(size: 12) : .caption }
+        var title: Font { large ? .system(size: 15, weight: .semibold) : .headline }
+        var secondary: Color { large ? Color(Brand.textSecondaryStrong) : Theme.secondaryText }
+        var hairline: Color { large ? Color.primary.opacity(0.18) : Theme.hairline }
+    }
+
     static func battery(_ watts: Double) -> Color { watts < -0.05 ? draining : charging }
 
     static func verdict(_ v: ChargerAssessment.Verdict) -> Color {
@@ -35,22 +45,32 @@ struct Card<Content: View>: View {
     let title: String
     let symbol: String
     @ViewBuilder var content: Content
+    @Environment(\.themeStyle) private var style
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Label {
                 Text(title)
             } icon: {
-                Image(systemName: symbol).foregroundStyle(Theme.secondaryText)
+                Image(systemName: symbol).foregroundStyle(style.secondary)
             }
-            .font(.headline)
+            .font(style.title)
             content
         }
         .padding(14)
         // Fills the row height too, so cards side by side end on the same line
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.surface))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(style.hairline, lineWidth: 1))
+    }
+}
+
+private struct ThemeStyleKey: EnvironmentKey { static let defaultValue = Theme.Style() }
+
+extension EnvironmentValues {
+    var themeStyle: Theme.Style {
+        get { self[ThemeStyleKey.self] }
+        set { self[ThemeStyleKey.self] = newValue }
     }
 }
 
@@ -58,17 +78,18 @@ struct StatRow: View {
     let label: String
     let value: String
     var tint: Color? = nil
+    @Environment(\.themeStyle) private var style
 
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(label).foregroundStyle(Theme.secondaryText)
+            Text(label).foregroundStyle(style.secondary)
             Spacer(minLength: 12)
             Text(value)
                 .monospacedDigit()
                 .foregroundStyle(tint ?? .primary)
                 .multilineTextAlignment(.trailing)
         }
-        .font(.callout)
+        .font(style.body)
     }
 }
 
@@ -255,20 +276,79 @@ struct ProfileTable: View {
     }
 }
 
-struct CellBars: View {
+/// The pack drawn as a battery with one compartment per cell, each filled to its own level.
+/// Lithium cells run from about 3.0 V empty to 4.35 V full; the fill maps that range.
+struct CellPack: View {
     let cells: [Double]
+    var charging = false
+    @Environment(\.themeStyle) private var style
+
+    private func level(_ v: Double) -> Double { min(1, max(0, (v - 3.0) / 1.35)) }
 
     var body: some View {
-        // Lithium cells sit between roughly 3.0 V empty and 4.4 V full
-        VStack(alignment: .leading, spacing: 6) {
-            ForEach(Array(cells.enumerated()), id: \.offset) { i, v in
-                HStack(spacing: 8) {
-                    Text("Cell \(i + 1)").font(.caption).foregroundStyle(Theme.secondaryText).frame(width: 44, alignment: .leading)
-                    LoadBarTinted(fraction: (v - 3.0) / 1.4, tint: Theme.charging)
-                    Text(Units.volts(v, digits: 3)).font(.caption.monospacedDigit()).frame(width: 58, alignment: .trailing)
+        let tint = charging ? Theme.charging : Theme.charging.opacity(0.85)
+        let lo = cells.min() ?? 0, hi = cells.max() ?? 0
+        VStack(spacing: 6) {
+            HStack(spacing: 0) {
+                HStack(spacing: 4) {
+                    ForEach(Array(cells.enumerated()), id: \.offset) { _, v in
+                        GeometryReader { geo in
+                            ZStack(alignment: .bottom) {
+                                RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Color.primary.opacity(0.06))
+                                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                    .fill(tint)
+                                    .frame(height: geo.size.height * level(v))
+                                    .animation(.smooth(duration: 0.8), value: v)
+                            }
+                        }
+                    }
+                }
+                .padding(4)
+                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(style.secondary.opacity(0.6), lineWidth: 2))
+                // Terminal on the right, like a pack lying on its side
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(style.secondary.opacity(0.6))
+                    .frame(width: 5, height: 22)
+            }
+            .frame(height: 64)
+            HStack(spacing: 4) {
+                ForEach(Array(cells.enumerated()), id: \.offset) { i, v in
+                    VStack(spacing: 1) {
+                        Text(Units.volts(v, digits: 3)).font(style.caption.monospacedDigit())
+                            // The lowest and highest cell are marked so imbalance is visible at a glance
+                            .foregroundStyle(cells.count > 1 && (v == lo || v == hi) && hi - lo > 0.02 ? Theme.warning : .primary)
+                        Text("Cell \(i + 1)").font(style.caption).foregroundStyle(style.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
                 }
             }
+            .padding(.trailing, 5)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Cells: " + cells.enumerated().map { "cell \($0.offset + 1) \(Units.volts($0.element, digits: 2))" }.joined(separator: ", "))
+    }
+}
+
+/// A fan that spins at a speed following its rpm and stands still when the fan is off.
+struct SpinningFan: View {
+    let rpm: Double
+    var size: CGFloat = 26
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var clock = AnimationClock()
+
+    var body: some View {
+        let running = rpm > 50
+        TimelineView(.animation(minimumInterval: 1 / 60, paused: !running || reduceMotion)) { context in
+            // Visual turns per second, scaled down from real rpm so it reads as speed, not blur
+            let _ = clock.tick(context.date.timeIntervalSinceReferenceDate)
+            let angle = running ? clock.value("fan", speed: 0.4 + rpm / 2500) * 360 : 0
+            Image(systemName: "fan")
+                .font(.system(size: size, weight: .regular))
+                .rotationEffect(.degrees(angle.truncatingRemainder(dividingBy: 360)))
+                .foregroundStyle(running ? Theme.system : Theme.secondaryText.opacity(0.6))
+        }
+        .frame(width: size + 6, height: size + 6)
+        .accessibilityHidden(true)
     }
 }
 

@@ -13,8 +13,9 @@ struct DashboardView: View {
     @State private var mode: ChartMode = .power
 
     var body: some View {
-        if rendering { content.background(Theme.canvas) } else {
+        if rendering { content.background(Theme.canvas).environment(\.themeStyle, Theme.Style(large: true)) } else {
             ScrollView { content }
+                .environment(\.themeStyle, Theme.Style(large: true))
                 .frame(minWidth: 900, minHeight: 640)
                 .background(Theme.canvas)
                 .tint(Theme.accent)
@@ -32,7 +33,7 @@ struct DashboardView: View {
                         } icon: {
                             Image(systemName: "eye.slash")
                         }
-                        .font(.callout)
+                        .font(Theme.Style(large: true).body)
                         .padding(12)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(RoundedRectangle(cornerRadius: 8).fill(Theme.warning.opacity(0.12)))
@@ -53,8 +54,8 @@ struct DashboardView: View {
                                 EnergyModePicker(energy: monitor.energy, source: .battery, compact: false)
                                 EnergyModePicker(energy: monitor.energy, source: .charger, compact: false)
                                 Text("Changing it asks for an administrator password, because macOS only lets an admin change power settings.")
-                                    .font(.caption)
-                                    .foregroundStyle(Theme.secondaryText)
+                                    .font(Theme.Style(large: true).caption)
+                                    .foregroundStyle(Theme.Style(large: true).secondary)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                             if !s.peripherals.isEmpty || !monitor.accessories.devices.isEmpty {
@@ -94,7 +95,7 @@ struct DashboardView: View {
                     .font(.system(size: 36, weight: .semibold))
                     .monospacedDigit()
                 HStack(spacing: 8) {
-                    Text(s.statusLine).font(.title3).foregroundStyle(Theme.secondaryText)
+                    Text(s.statusLine).font(.title3).foregroundStyle(Theme.Style(large: true).secondary)
                     EnergyModeBadge(mode: s.energyMode)
                 }
             }
@@ -161,8 +162,8 @@ struct DashboardView: View {
                             unit: "°C", height: 120, strideMinutes: range.stride)
             }
             Text("Volts and amps follow the charger input while plugged in and the battery pack on battery. The 24 h and 7 d views use one averaged point per minute, kept for 30 days.")
-                .font(.caption)
-                .foregroundStyle(Theme.secondaryText)
+                .font(Theme.Style(large: true).caption)
+                .foregroundStyle(Theme.Style(large: true).secondary)
         }
     }
 }
@@ -206,13 +207,13 @@ struct HeroStat: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             Label(title, systemImage: symbol)
-                .font(.caption)
-                .foregroundStyle(Theme.secondaryText)
+                .font(Theme.Style(large: true).caption)
+                .foregroundStyle(Theme.Style(large: true).secondary)
             Text(value)
                 .font(.title2.weight(.semibold))
                 .monospacedDigit()
                 .foregroundStyle(tint == .secondary ? .primary : tint)
-            Text(detail).font(.caption.monospacedDigit()).foregroundStyle(Theme.secondaryText)
+            Text(detail).font(Theme.Style(large: true).caption.monospacedDigit()).foregroundStyle(Theme.Style(large: true).secondary)
         }
         .padding(12)
         .frame(minWidth: 120, alignment: .leading)
@@ -254,12 +255,12 @@ struct ChargerCard: View {
                 if a.isWireless { StatRow(label: "Type", value: "Wireless") }
                 if !a.profiles.isEmpty {
                     Divider()
-                    Text("Power profiles this charger offers").font(.caption).foregroundStyle(Theme.secondaryText)
+                    Text("Power profiles this charger offers").font(Theme.Style(large: true).caption).foregroundStyle(Theme.Style(large: true).secondary)
                     ProfileTable(adapter: a)
                 }
             } else {
                 Text("No charger connected. Plug one in to see what it offers and how hard it's working.")
-                    .foregroundStyle(Theme.secondaryText)
+                    .foregroundStyle(Theme.Style(large: true).secondary)
             }
         }
     }
@@ -290,8 +291,8 @@ struct BatteryCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     StatRow(label: "Charging", value: hold.title, tint: hold.title == "Full" ? nil : Theme.warning)
                     Text(hold.detail + (hold.code.map { " macOS reason code 0x\(String($0, radix: 16, uppercase: true))." } ?? ""))
-                        .font(.caption)
-                        .foregroundStyle(Theme.secondaryText)
+                        .font(Theme.Style(large: true).caption)
+                        .foregroundStyle(Theme.Style(large: true).secondary)
                         .fixedSize(horizontal: false, vertical: true)
                     if hold.title != "Full" {
                         Button("Open Battery Settings", action: SystemSettings.openBattery).controlSize(.small)
@@ -309,15 +310,15 @@ struct BatteryCard: View {
             if !s.cellVolts.isEmpty {
                 Divider()
                 HStack {
-                    Text("Cells").font(.caption).foregroundStyle(Theme.secondaryText)
+                    Text("Cells").font(Theme.Style(large: true).caption).foregroundStyle(Theme.Style(large: true).secondary)
                     Spacer()
                     if let spread = s.cellSpreadMillivolts {
                         Text("Imbalance \(spread) mV")
-                            .font(.caption.monospacedDigit())
+                            .font(Theme.Style(large: true).caption.monospacedDigit())
                             .foregroundStyle(spread > 50 ? Theme.warning : .secondary)
                     }
                 }
-                CellBars(cells: s.cellVolts)
+                CellPack(cells: s.cellVolts, charging: s.state == .charging)
             }
         }
     }
@@ -332,14 +333,14 @@ struct ChargerHistoryCard: View {
         Card(title: "Chargers you've used", symbol: "suitcase.rolling") {
             if chargers.isEmpty {
                 Text("Every charger you plug in is remembered here with its peak load, so you can tell which bricks keep up.")
-                    .foregroundStyle(Theme.secondaryText)
+                    .foregroundStyle(Theme.Style(large: true).secondary)
             } else {
                 Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 8) {
                     GridRow {
                         Text("Charger"); Text("Limit"); Text("Peak load"); Text("Quality"); Text("Efficiency"); Text("Mac wanted"); Text("Used"); Text("Last seen"); Text("Verdict"); Text("")
                     }
-                    .font(.caption)
-                    .foregroundStyle(Theme.secondaryText)
+                    .font(Theme.Style(large: true).caption)
+                    .foregroundStyle(Theme.Style(large: true).secondary)
                     ForEach(chargers) { r in
                         GridRow {
                             HStack(spacing: 6) {
@@ -354,18 +355,18 @@ struct ChargerHistoryCard: View {
                                 Text(g.title + (r.resistanceOhms.map { String(format: ", %.2f Ω", $0) } ?? ""))
                                     .foregroundStyle(Color(Brand.color(g.tone)))
                             } else {
-                                Text("Not graded").foregroundStyle(Theme.secondaryText)
+                                Text("Not graded").foregroundStyle(Theme.Style(large: true).secondary)
                             }
                             if let e = r.averageEfficiency {
                                 let grade = ChargerEfficiency.Grade.of(e)
                                 Text("\(Units.percent(e)) \(grade.title)").foregroundStyle(Color(Brand.color(grade.tone)))
                             } else {
-                                Text("Not rated").foregroundStyle(Theme.secondaryText)
+                                Text("Not rated").foregroundStyle(Theme.Style(large: true).secondary)
                             }
                             Text(Units.watts(r.peakDemandWatts, digits: 0))
                             Text(Units.duration(minutes: Int(r.secondsConnected / 60)))
                             Text(r.lastSeen, format: .relative(presentation: .named))
-                            Text(r.lastVerdict ?? "Not judged yet").foregroundStyle(Theme.secondaryText)
+                            Text(r.lastVerdict ?? "Not judged yet").foregroundStyle(Theme.Style(large: true).secondary)
                             Button {
                                 forget(r.fingerprint)
                             } label: {
@@ -397,7 +398,7 @@ struct AccessoriesCard: View {
                     Text(d.summary).monospacedDigit()
                         .foregroundStyle((d.lowest ?? 100) <= 20 ? Theme.warning : Theme.secondaryText)
                 }
-                .font(.callout)
+                .font(Theme.Style(large: true).body)
             }
             ForEach(peripherals) { p in
                 HStack {
@@ -408,17 +409,17 @@ struct AccessoriesCard: View {
                         .foregroundStyle(Theme.system)
                     if !compact {
                         Text("\(p.allocatedMilliamps) mA at 5 V")
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(Theme.secondaryText)
+                            .font(Theme.Style(large: true).caption.monospacedDigit())
+                            .foregroundStyle(Theme.Style(large: true).secondary)
                             .frame(width: 110, alignment: .trailing)
                     }
                 }
-                .font(.callout)
+                .font(Theme.Style(large: true).body)
             }
             if !peripherals.isEmpty {
                 Text("Powered over USB: macOS reports the power it set aside for each device, not a live reading, so these are ceilings. Whatever they draw is already part of Mac uses.")
-                .font(.caption)
-                .foregroundStyle(Theme.secondaryText)
+                .font(Theme.Style(large: true).caption)
+                .foregroundStyle(Theme.Style(large: true).secondary)
                 .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -456,14 +457,14 @@ struct EfficiencyRating: View {
                 StatRow(label: "Delivered to the Mac", value: Units.watts(e.deliveredWatts), tint: Theme.input)
                 StatRow(label: "Lost as heat", value: Units.watts(e.lossWatts), tint: Theme.warning)
                 Text("Excellent is 94% or more, typical of good GaN chargers; good is 90%, fair 85%. The loss is macOS's own estimate.")
-                    .font(.caption)
-                    .foregroundStyle(Theme.secondaryText)
+                    .font(Theme.Style(large: true).caption)
+                    .foregroundStyle(Theme.Style(large: true).secondary)
             } else {
                 Text(snapshot.isExternalPower
                      ? "Not rated below \(Int(ChargerEfficiency.minimumRatedWatts)) W, where every charger is least efficient."
                      : "Plug in a charger to rate it.")
-                    .font(.caption)
-                    .foregroundStyle(Theme.secondaryText)
+                    .font(Theme.Style(large: true).caption)
+                    .foregroundStyle(Theme.Style(large: true).secondary)
             }
         }
     }
@@ -483,18 +484,18 @@ struct ReportCard: View {
             ForEach(quality.checks) { check in
                 VStack(alignment: .leading, spacing: 1) {
                     HStack {
-                        Text(check.name).foregroundStyle(Theme.secondaryText)
+                        Text(check.name).foregroundStyle(Theme.Style(large: true).secondary)
                         Spacer()
                         Text(check.value).monospacedDigit()
                             .foregroundStyle(check.grade.map { Color(Brand.color($0.tone)) } ?? Theme.secondaryText)
                     }
-                    .font(.callout)
-                    Text(check.detail).font(.caption).foregroundStyle(Theme.secondaryText)
+                    .font(Theme.Style(large: true).body)
+                    Text(check.detail).font(Theme.Style(large: true).caption).foregroundStyle(Theme.Style(large: true).secondary)
                 }
             }
             Text("The overall grade is the weakest check. Cable resistance comes from how voltage falls as current rises, so it separates the cable from the charger.")
-                .font(.caption)
-                .foregroundStyle(Theme.secondaryText)
+                .font(Theme.Style(large: true).caption)
+                .foregroundStyle(Theme.Style(large: true).secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -521,9 +522,13 @@ struct ThermalsCard: View {
     var body: some View {
         Card(title: "Thermals", symbol: "fan") {
             ForEach(thermals.fans) { fan in
-                VStack(alignment: .leading, spacing: 4) {
-                    StatRow(label: fan.name(of: thermals.fans.count), value: "\(Int(fan.rpm.rounded()).formatted()) rpm")
-                    if let f = fan.fraction { LoadBar(fraction: f, height: 6) }
+                HStack(spacing: 10) {
+                    SpinningFan(rpm: fan.rpm)
+                    VStack(alignment: .leading, spacing: 4) {
+                        StatRow(label: fan.name(of: thermals.fans.count),
+                                value: fan.rpm < 50 ? "Off" : "\(Int(fan.rpm.rounded()).formatted()) rpm")
+                        if fan.rpm >= 50, let f = fan.fraction { LoadBar(fraction: f, height: 6) }
+                    }
                 }
             }
             if thermals.fans.isEmpty {
@@ -535,8 +540,8 @@ struct ThermalsCard: View {
             if let gpu = thermals.gpuC { StatRow(label: "GPU", value: Units.celsius(gpu)) }
             StatRow(label: "Battery", value: Units.celsius(batteryC))
             Text("Read from the System Management Controller. More watts means more heat, and the fans follow a few seconds later.")
-                .font(.caption)
-                .foregroundStyle(Theme.secondaryText)
+                .font(Theme.Style(large: true).caption)
+                .foregroundStyle(Theme.Style(large: true).secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -549,7 +554,7 @@ struct EnergyByAppCard: View {
     var body: some View {
         Card(title: "Energy use by app", symbol: "chart.bar.xaxis") {
             if impact.apps.isEmpty {
-                Text("Sampling…").foregroundStyle(Theme.secondaryText)
+                Text("Sampling…").foregroundStyle(Theme.Style(large: true).secondary)
             } else {
                 let top = impact.apps.first?.impact ?? 1
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 24), GridItem(.flexible())], alignment: .leading, spacing: 10) {
@@ -558,15 +563,15 @@ struct EnergyByAppCard: View {
                             if let path = app.bundlePath {
                                 Image(nsImage: NSWorkspace.shared.icon(forFile: path)).resizable().frame(width: 18, height: 18)
                             } else {
-                                Image(systemName: "gearshape").frame(width: 18, height: 18).foregroundStyle(Theme.secondaryText)
+                                Image(systemName: "gearshape").frame(width: 18, height: 18).foregroundStyle(Theme.Style(large: true).secondary)
                             }
                             VStack(alignment: .leading, spacing: 3) {
                                 HStack {
                                     Text(app.name).lineLimit(1)
                                     Spacer()
-                                    Text(String(format: "%.1f", app.impact)).monospacedDigit().foregroundStyle(Theme.secondaryText)
+                                    Text(String(format: "%.1f", app.impact)).monospacedDigit().foregroundStyle(Theme.Style(large: true).secondary)
                                 }
-                                .font(.callout)
+                                .font(Theme.Style(large: true).body)
                                 LoadBarTinted(fraction: app.impact / max(top, 1), tint: Theme.system)
                             }
                         }
@@ -574,8 +579,8 @@ struct EnergyByAppCard: View {
                 }
             }
             Text("Energy impact as Activity Monitor scores it: a relative measure of how hard each app works the Mac, not watts. Helpers count toward their app.")
-                .font(.caption)
-                .foregroundStyle(Theme.secondaryText)
+                .font(Theme.Style(large: true).caption)
+                .foregroundStyle(Theme.Style(large: true).secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -611,17 +616,17 @@ struct EnergyCard: View {
                 }.joined(separator: ", "))
             }
             Text("From the wall per day, integrated from one averaged reading per minute. Days without Wattsup running are not counted.")
-                .font(.caption)
-                .foregroundStyle(Theme.secondaryText)
+                .font(Theme.Style(large: true).caption)
+                .foregroundStyle(Theme.Style(large: true).secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
 
     private func figure(_ label: String, _ value: String, detail: String? = nil) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(label).font(.caption).foregroundStyle(Theme.secondaryText)
+            Text(label).font(Theme.Style(large: true).caption).foregroundStyle(Theme.Style(large: true).secondary)
             Text(value).font(.title3.weight(.semibold)).monospacedDigit()
-            if let detail { Text(detail).font(.caption).foregroundStyle(Theme.secondaryText) }
+            if let detail { Text(detail).font(Theme.Style(large: true).caption).foregroundStyle(Theme.Style(large: true).secondary) }
         }
     }
 }
@@ -632,7 +637,7 @@ struct HealthTrendView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Health over time").font(.caption).foregroundStyle(Theme.secondaryText)
+            Text("Health over time").font(Theme.Style(large: true).caption).foregroundStyle(Theme.Style(large: true).secondary)
             if trend.points.count > 1 {
                 Chart(trend.points) { p in
                     LineMark(x: .value("Day", p.date), y: .value("Health", p.health * 100))
@@ -646,8 +651,8 @@ struct HealthTrendView: View {
             }
             if trend.isCollecting {
                 Text("Collecting daily readings. A wear rate appears after two weeks, a projection once there is a clear trend.")
-                    .font(.caption)
-                    .foregroundStyle(Theme.secondaryText)
+                    .font(Theme.Style(large: true).caption)
+                    .foregroundStyle(Theme.Style(large: true).secondary)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
                 if let m = trend.perMonth { StatRow(label: "Wear per month", value: String(format: "%.2f points", m * 100)) }

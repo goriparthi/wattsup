@@ -96,7 +96,8 @@ struct PopoverView: View {
             DetailGroup(title: "Mac", symbol: "laptopcomputer") {
                 if let t = s.thermals {
                     if !t.fans.isEmpty {
-                        StatRow(label: "Fans", value: t.fans.map { "\(Int($0.rpm.rounded()).formatted())" }.joined(separator: " / ") + " rpm")
+                        StatRow(label: "Fans", value: t.fans.allSatisfy { $0.rpm < 50 } ? "Off"
+                                : t.fans.map { "\(Int($0.rpm.rounded()).formatted())" }.joined(separator: " / ") + " rpm")
                     }
                     if let c = t.cpuC { StatRow(label: "Chip", value: Units.celsius(c)) }
                 }

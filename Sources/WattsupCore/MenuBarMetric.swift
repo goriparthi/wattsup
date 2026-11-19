@@ -92,7 +92,7 @@ public enum MenuBarMetric: String, CaseIterable, Codable, Identifiable, Sendable
         case .peripherals:
             return s.peripherals.isEmpty ? nil : String(format: "USB %.0fW", s.peripherals.allocatedWatts)
         case .chipTemp: return s.thermals?.cpuC.map { String(format: "%.0f°C", $0) }
-        case .fanSpeed: return s.thermals?.fanRPM.map { String(format: "%.0frpm", $0) }
+        case .fanSpeed: return s.thermals?.fanRPM.map { $0 < 50 ? "Fans off" : String(format: "%.0frpm", $0) }
         }
     }
 
