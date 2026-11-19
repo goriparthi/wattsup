@@ -57,13 +57,31 @@ final class PowerSnapshotTests: XCTestCase {
         XCTAssertEqual(MenuBarMetric.batteryWatts.tone(for: s), .draining)
     }
 
-    func testEstimatingTimeIsNil() {
+    func testWattsupEstimatesWhenMacOSStops() {
         var d = Fixture.charging()
         d["AvgTimeToFull"] = 65535
         d["TimeRemaining"] = 0
         let s = Fixture.snapshot(d)
         XCTAssertNil(s.minutesToFull)
-        XCTAssertEqual(s.statusLine, "Charging, estimating time")
+        // (8054 - 7159) mAh at 2.124 A is about 25 minutes
+        XCTAssertEqual(s.estimatedMinutes, 25)
+        XCTAssertEqual(s.statusLine, "Charging, about 25 min to full")
+        XCTAssertEqual(MenuBarMetric.time.text(for: s), "~0:25")
+    }
+
+    func testTimeReadingNeverVanishes() {
+        var d = Fixture.charging()
+        d["AvgTimeToFull"] = 65535
+        d["TimeRemaining"] = 0
+        d["IsCharging"] = false
+        XCTAssertEqual(MenuBarMetric.time.text(for: Fixture.snapshot(d)), "Held")
+        d["FullyCharged"] = true
+        XCTAssertEqual(MenuBarMetric.time.text(for: Fixture.snapshot(d)), "Full")
+        var e = Fixture.charging()
+        e["AvgTimeToFull"] = 65535
+        e["TimeRemaining"] = 0
+        e["AppleRawCurrentCapacity"] = 8054
+        XCTAssertEqual(MenuBarMetric.time.text(for: Fixture.snapshot(e)), "…", "nothing to fill yet")
     }
 
     func testPluggedInNotChargingIsHeld() {

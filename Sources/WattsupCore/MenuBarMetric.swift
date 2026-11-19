@@ -54,7 +54,8 @@ public enum MenuBarMetric: String, CaseIterable, Codable, Identifiable, Sendable
         case .chargerLoad: return "Share of the charger's limit in use"
         case .energyMode: return "Shown only when Low or High Power is on"
         case .peripherals: return "Power the Mac allocated to USB devices, shown when any are plugged in"
-        case .percent, .time, .temperature, .health: return ""
+        case .time: return "macOS's estimate; ~ marks Wattsup's own when macOS has none"
+        case .percent, .temperature, .health: return ""
         }
     }
 
@@ -72,7 +73,15 @@ public enum MenuBarMetric: String, CaseIterable, Codable, Identifiable, Sendable
         case .adapterLoss: return s.adapterLossWatts.flatMap { $0 > 0 ? String(format: "%.1fW", $0) : nil }
         case .chargerLoad: return s.chargerLoad.map { String(format: "%.0f%%", $0 * 100) }
         case .percent: return "\(s.percent)%"
-        case .time: return (s.minutesToFull ?? s.minutesToEmpty).map(Units.clock(minutes:))
+        case .time:
+            // macOS's estimate first, then Wattsup's own marked with ~, so a chosen reading never vanishes
+            if let m = s.minutesToFull ?? s.minutesToEmpty { return Units.clock(minutes: m) }
+            if let m = s.estimatedMinutes { return "~" + Units.clock(minutes: m) }
+            switch s.state {
+            case .full: return "Full"
+            case .held: return "Held"
+            case .charging, .discharging: return "…"
+            }
         case .temperature: return s.temperatureC.map { String(format: "%.0f°C", $0) }
         case .health: return s.health.map { String(format: "%.0f%%", $0 * 100) }
         case .energyMode: return s.energyMode?.shortTitle

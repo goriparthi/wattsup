@@ -169,13 +169,35 @@ public struct PowerSnapshot: Equatable, Sendable {
     }
     public var headlineWatts: Double { isExternalPower ? (inputWatts ?? 0) : systemWatts }
 
+    /// Wattsup's own estimate for when macOS has none (it stops estimating near full): capacity
+    /// left to fill over the charge current, or charge left over the drain. Nil when not measurable.
+    public var estimatedMinutes: Int? {
+        guard let remaining = remainingCapacity, batteryVolts > 0 else { return nil }
+        let amps = batteryWatts / batteryVolts
+        let hours: Double
+        switch state {
+        case .charging:
+            guard let full = fullChargeCapacity, full > remaining, amps > 0.05 else { return nil }
+            hours = Double(full - remaining) / 1000 / amps
+        case .discharging:
+            guard remaining > 0, amps < -0.05 else { return nil }
+            hours = Double(remaining) / 1000 / -amps
+        case .full, .held:
+            return nil
+        }
+        let minutes = Int((hours * 60).rounded())
+        return minutes > 0 && minutes < 48 * 60 ? minutes : nil
+    }
+
     public var statusLine: String {
         switch state {
         case .charging:
-            return minutesToFull.map { "Charging, \(Units.duration(minutes: $0)) to full" }
+            if let m = minutesToFull { return "Charging, \(Units.duration(minutes: m)) to full" }
+            return estimatedMinutes.map { "Charging, about \(Units.duration(minutes: $0)) to full" }
                 ?? "Charging, estimating time"
         case .discharging:
-            return minutesToEmpty.map { "On battery, \(Units.duration(minutes: $0)) left" }
+            if let m = minutesToEmpty { return "On battery, \(Units.duration(minutes: m)) left" }
+            return estimatedMinutes.map { "On battery, about \(Units.duration(minutes: $0)) left" }
                 ?? "On battery, estimating time"
         case .full, .held:
             return state.title
