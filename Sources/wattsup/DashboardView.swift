@@ -67,7 +67,7 @@ struct DashboardView: View {
                     charts
                     HStack(alignment: .top, spacing: 16) {
                         ChargerCard(snapshot: s, assessment: monitor.assessment, quality: monitor.quality)
-                        BatteryCard(snapshot: s)
+                        BatteryCard(snapshot: s, trend: HealthTrend(points: monitor.healthPoints))
                         if let t = s.thermals { ThermalsCard(thermals: t, batteryC: s.temperatureC) }
                     }
                     .fixedSize(horizontal: false, vertical: true)
@@ -267,6 +267,7 @@ struct ChargerCard: View {
 
 struct BatteryCard: View {
     let snapshot: PowerSnapshot
+    let trend: HealthTrend
 
     var body: some View {
         let s = snapshot
@@ -294,6 +295,8 @@ struct BatteryCard: View {
             if let seconds = s.thermallyLimitedSeconds, seconds > 0 {
                 StatRow(label: "Slowed by heat", value: Units.duration(minutes: max(1, seconds / 60)))
             }
+            Divider()
+            HealthTrendView(trend: trend)
             if !s.cellVolts.isEmpty {
                 Divider()
                 HStack {
@@ -594,6 +597,37 @@ struct EnergyCard: View {
             Text(label).font(.caption).foregroundStyle(Theme.secondaryText)
             Text(value).font(.title3.weight(.semibold)).monospacedDigit()
             if let detail { Text(detail).font(.caption).foregroundStyle(Theme.secondaryText) }
+        }
+    }
+}
+
+/// Battery wear over months: the stored daily health, its rate, and when it would reach 80%.
+struct HealthTrendView: View {
+    let trend: HealthTrend
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Health over time").font(.caption).foregroundStyle(Theme.secondaryText)
+            if trend.points.count > 1 {
+                Chart(trend.points) { p in
+                    LineMark(x: .value("Day", p.date), y: .value("Health", p.health * 100))
+                        .foregroundStyle(Theme.charging)
+                }
+                .chartYScale(domain: .automatic(includesZero: false))
+                .chartYAxis { AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) }
+                .frame(height: 70)
+            }
+            if trend.isCollecting {
+                Text("Collecting daily readings. A wear rate appears after two weeks, a projection once there is a clear trend.")
+                    .font(.caption)
+                    .foregroundStyle(Theme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                if let m = trend.perMonth { StatRow(label: "Wear per month", value: String(format: "%.2f points", m * 100)) }
+                if let c = trend.perHundredCycles { StatRow(label: "Wear per 100 cycles", value: String(format: "%.2f points", c * 100)) }
+                StatRow(label: "Reaches 80%",
+                        value: trend.monthsToService.map { $0 < 1 ? "within a month" : "in about \(Int($0.rounded())) months" } ?? "No decline yet")
+            }
         }
     }
 }

@@ -18,6 +18,8 @@ final class PowerMonitor {
     private(set) var quality: ChargerQuality?
     /// Stored minutes from the last 30 days, for the long charts and energy totals.
     private(set) var archive: [PowerSample] = []
+    /// Daily battery health, for the wear trend.
+    private(set) var healthPoints: [HealthPoint] = []
 
     @ObservationIgnored var onUpdate: (() -> Void)?
     let energy = EnergyModeController()
@@ -33,6 +35,7 @@ final class PowerMonitor {
     @ObservationIgnored private var ticksSinceQuality = 0
     @ObservationIgnored private let historyStore = HistoryStore()
     @ObservationIgnored private var minutes = MinuteAggregator()
+    @ObservationIgnored private let healthStore = HealthStore()
     private static let peripheralScanEvery = 3
     /// Starts due, so the first reading already includes attached devices
     @ObservationIgnored private var ticksSincePeripheralScan = PowerMonitor.peripheralScanEvery
@@ -40,6 +43,7 @@ final class PowerMonitor {
     init() {
         chargers = store.load()
         chargers.pruneTransient()
+        healthPoints = healthStore.load()
         archive = historyStore.load(days: HistoryStore.keepDays)
         historyStore.prune()
     }
@@ -92,6 +96,7 @@ final class PowerMonitor {
             let a = ChargerAssessment(snapshot: s, history: history, known: chargers.records)
             // Nothing is logged while the charger is still negotiating its real power profile
             if a.verdict != .negotiating { chargers.record(s, verdict: a.verdict.isSettled ? a.headline : nil) }
+            recordHealth(s)
             trackDropouts(from: snapshot, to: s)
             updateQuality(s)
             logTransitions(from: snapshot, to: s, verdict: a)
@@ -102,6 +107,14 @@ final class PowerMonitor {
             lastFingerprint = s.adapter?.fingerprint
         }
         onUpdate?()
+    }
+
+    private func recordHealth(_ s: PowerSnapshot) {
+        guard let health = s.health, let cycles = s.cycleCount else { return }
+        let point = HealthPoint(date: s.date, health: health, cycles: cycles, nominalCapacity: s.nominalCapacity)
+        guard HealthTrend.shouldRecord(point, after: healthPoints.last) else { return }
+        healthStore.append(point)
+        healthPoints.append(point)
     }
 
     /// A replug of the same charger within 10 s counts as a drop-out against it.
