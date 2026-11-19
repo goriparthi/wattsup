@@ -8,8 +8,11 @@ import WattsupCore
 enum Updates {
     static let repoURL = URL(string: "https://github.com/goriparthi/wattsup")!
     static let latestURL = URL(string: "https://api.github.com/repos/goriparthi/wattsup/releases/latest")!
-    /// Updates are swapped in only when signed by this Developer ID team.
+    /// Updates are swapped in only when signed by this Developer ID team as this bundle id.
     static let expectedTeamID = "QX3NQYWX6F"
+    static let expectedBundleID = "com.goriparthi.wattsup"
+    static let downloadHosts: Set<String> = ["github.com", "objects.githubusercontent.com",
+                                             "release-assets.githubusercontent.com"]
 
     enum Result {
         case upToDate
@@ -39,14 +42,17 @@ enum Updates {
             }
             let latest = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
             let dmg = (json["assets"] as? [[String: Any]])?
-                .compactMap { $0["browser_download_url"] as? String }
-                .first { $0.hasSuffix(".dmg") }
-                .flatMap(URL.init(string:))
+                .compactMap { ($0["browser_download_url"] as? String).flatMap(URL.init(string:)) }
+                .first { $0.pathExtension == "dmg" && isTrustedDownload($0) }
             return VersionCompare.isNewer(latest, than: currentVersion)
                 ? .available(version: latest, page: page, dmg: dmg) : .upToDate
         } catch {
             return .failed("Update check failed: \(error.localizedDescription)")
         }
+    }
+
+    static func isTrustedDownload(_ url: URL) -> Bool {
+        url.scheme == "https" && downloadHosts.contains(url.host?.lowercased() ?? "")
     }
 
     // MARK: In-place install
@@ -58,7 +64,8 @@ enum Updates {
 
     /// Downloads, mounts and verifies the DMG, then stages the new bundle beside a swap helper.
     /// Nothing touches the installed app until the caller runs `swap` and quits.
-    static func stage(dmg: URL, replacing target: URL) async -> StageResult {
+    static func stage(dmg: URL, version: String, replacing target: URL) async -> StageResult {
+        guard isTrustedDownload(dmg) else { return .failed("Update rejected: unexpected download location") }
         let fm = FileManager.default
         let work = fm.temporaryDirectory.appendingPathComponent("wattsup-update-\(UUID().uuidString)")
         let image = work.appendingPathComponent("update.dmg")
@@ -70,11 +77,11 @@ enum Updates {
             return .failed("Download failed: \(error.localizedDescription)")
         }
         return await Task.detached(priority: .userInitiated) {
-            verifyAndStage(image: image, work: work, target: target)
+            verifyAndStage(image: image, work: work, target: target, version: version)
         }.value
     }
 
-    private static func verifyAndStage(image: URL, work: URL, target: URL) -> StageResult {
+    private static func verifyAndStage(image: URL, work: URL, target: URL, version: String) -> StageResult {
         let fm = FileManager.default
         func fail(_ message: String) -> StageResult {
             try? fm.removeItem(at: work)
@@ -90,23 +97,34 @@ enum Updates {
         else { return fail("Could not open the downloaded image") }
         defer { _ = run("/usr/bin/hdiutil", ["detach", mount, "-quiet"]) }
 
+        // A real directory only; a symlink could point anywhere on disk
         guard let app = (try? fm.contentsOfDirectory(atPath: mount))?
-            .first(where: { $0.hasSuffix(".app") })
+            .filter({ $0.hasSuffix(".app") })
             .map({ (mount as NSString).appendingPathComponent($0) })
+            .first(where: { (try? fm.attributesOfItem(atPath: $0)[.type] as? FileAttributeType) == .typeDirectory })
         else { return fail("No app inside the downloaded image") }
 
-        // Notarized by Apple and signed by this team, checked as a cryptographic requirement
-        guard run("/usr/sbin/spctl", ["-a", "-t", "install", app]).status == 0 else {
-            return fail("Update rejected: not accepted by Gatekeeper")
-        }
-        let requirement = "anchor apple generic and certificate leaf[subject.OU] = \"\(expectedTeamID)\""
-        guard run("/usr/bin/codesign", ["--verify", "--deep", "--strict", "-R=\(requirement)", app]).status == 0 else {
-            return fail("Update rejected: unexpected signing identity")
-        }
-
+        // Copy first, then verify the copy, so what is checked is exactly what gets installed
         let staged = work.appendingPathComponent("staged.app")
         guard run("/bin/cp", ["-R", app, staged.path]).status == 0 else {
             return fail("Could not copy the new version")
+        }
+        guard run("/usr/sbin/spctl", ["-a", "-t", "exec", staged.path]).status == 0 else {
+            return fail("Update rejected: not accepted by Gatekeeper")
+        }
+        // Team and bundle id enforced as a code signing requirement, so the match is cryptographic
+        let requirement = "identifier \"\(expectedBundleID)\" and anchor apple generic "
+            + "and certificate leaf[subject.OU] = \"\(expectedTeamID)\""
+        guard run("/usr/bin/codesign", ["--verify", "--deep", "--strict", "-R=\(requirement)", staged.path]).status == 0 else {
+            return fail("Update rejected: unexpected signing identity")
+        }
+        let info = Bundle(url: staged)?.infoDictionary ?? [:]
+        guard info["CFBundleIdentifier"] as? String == expectedBundleID else {
+            return fail("Update rejected: not Wattsup")
+        }
+        let stagedVersion = info["CFBundleShortVersionString"] as? String ?? "0"
+        guard stagedVersion == version, VersionCompare.isNewer(stagedVersion, than: bundleVersion) else {
+            return fail("Update rejected: version \(stagedVersion) is not the advertised \(version)")
         }
 
         let script = work.appendingPathComponent("swap.sh")
@@ -231,7 +249,7 @@ final class UpdateController {
     private func install(dmg: URL, version: String) async {
         busy = true
         status = "Downloading \(version)…"
-        let result = await Updates.stage(dmg: dmg, replacing: Bundle.main.bundleURL)
+        let result = await Updates.stage(dmg: dmg, version: version, replacing: Bundle.main.bundleURL)
         busy = false
         switch result {
         case .failed(let message):

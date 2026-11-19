@@ -9,7 +9,7 @@ enum MenuBarIcon: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .power: return "Power, bolt and plug"
-        case .battery: return "Battery level"
+        case .battery: return "Battery state"
         case .none: return "None"
         }
     }

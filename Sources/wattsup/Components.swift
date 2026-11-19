@@ -2,13 +2,14 @@ import Charts
 import SwiftUI
 import WattsupCore
 
-/// Placeholder palette until the brand kit lands; every view reads color from here.
+/// SwiftUI face of the brand tokens in Brand.swift; every view reads color from here.
 enum Theme {
-    static let input = Color.teal
-    static let system = Color.blue
-    static let charging = Color.green
-    static let draining = Color.orange
-    static let warning = Color.red
+    static let input = Color(Brand.input)
+    static let system = Color(Brand.system)
+    static let charging = Color(Brand.charging)
+    static let draining = Color(Brand.draining)
+    static let warning = Color(Brand.warning)
+    static let accent = Color(Brand.iris)
     static let surface = Color.primary.opacity(0.045)
 
     static func battery(_ watts: Double) -> Color { watts < -0.05 ? draining : charging }
@@ -33,8 +34,12 @@ struct Card<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label(title, systemImage: symbol)
-                .font(.headline)
+            Label {
+                Text(title)
+            } icon: {
+                Image(systemName: symbol).foregroundStyle(Theme.accent)
+            }
+            .font(.headline)
             content
         }
         .padding(14)
@@ -219,11 +224,21 @@ struct LoadBar: View {
     }
 }
 
+/// Each series also carries its brand line pattern, so traces read without color.
 struct LineSeries: Identifiable {
     let name: String
     let color: Color
+    var dash: [CGFloat] = []
     let points: [(date: Date, value: Double)]
     var id: String { name }
+
+    enum Pattern {
+        static let input: [CGFloat] = []
+        static let system: [CGFloat] = [8, 4]
+        static let charging: [CGFloat] = [1, 5]
+        static let draining: [CGFloat] = [7, 4, 1, 4]
+        static let warning: [CGFloat] = [13, 5]
+    }
 }
 
 struct SeriesChart: View {
@@ -241,6 +256,7 @@ struct SeriesChart: View {
                     LineMark(x: .value("Time", p.date), y: .value(unit, p.value),
                              series: .value("Series", s.name))
                         .foregroundStyle(by: .value("Series", s.name))
+                        .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, dash: s.dash))
                         .interpolationMethod(.monotone)
                 }
             }
@@ -270,10 +286,14 @@ struct SeriesChart: View {
 
 enum Series {
     static func power(_ samples: [PowerSample]) -> [LineSeries] {
-        [
-            LineSeries(name: "Charger", color: Theme.input, points: samples.map { ($0.date, $0.inputWatts) }),
-            LineSeries(name: "Mac", color: Theme.system, points: samples.map { ($0.date, $0.systemWatts) }),
-            LineSeries(name: "Battery", color: Theme.battery(samples.last?.batteryWatts ?? 0),
+        let draining = (samples.last?.batteryWatts ?? 0) < -0.05
+        return [
+            LineSeries(name: "Charger", color: Theme.input, dash: LineSeries.Pattern.input,
+                       points: samples.map { ($0.date, $0.inputWatts) }),
+            LineSeries(name: "Mac", color: Theme.system, dash: LineSeries.Pattern.system,
+                       points: samples.map { ($0.date, $0.systemWatts) }),
+            LineSeries(name: "Battery", color: draining ? Theme.draining : Theme.charging,
+                       dash: draining ? LineSeries.Pattern.draining : LineSeries.Pattern.charging,
                        points: samples.map { ($0.date, $0.batteryWatts) }),
         ]
     }

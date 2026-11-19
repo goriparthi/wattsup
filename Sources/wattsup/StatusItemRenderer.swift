@@ -10,24 +10,14 @@ enum StatusItemRenderer {
     private static let gap: CGFloat = 4
 
     static func color(_ tone: MetricTone, colored: Bool) -> NSColor {
-        guard colored else { return .labelColor }
-        switch tone {
-        case .input: return .systemTeal
-        case .system: return .systemBlue
-        case .charging: return .systemGreen
-        case .draining: return .systemOrange
-        case .warning: return .systemRed
-        case .neutral: return .labelColor
-        }
+        colored ? Brand.color(tone) : .labelColor
     }
 
     static func apply(to button: NSStatusBarButton, snapshot s: PowerSnapshot?, settings: AppSettings) {
         button.attributedTitle = NSAttributedString()
         button.imagePosition = .imageOnly
         guard let s else {
-            let image = NSImage(systemSymbolName: "bolt.slash", accessibilityDescription: "Wattsup")
-            image?.isTemplate = true
-            button.image = image
+            button.image = BrandGlyph.noBattery.image()
             return
         }
         let readings = settings.metrics.filter { $0.text(for: s) != nil }
@@ -101,8 +91,13 @@ enum StatusItemRenderer {
     }
 
     static func icon(for s: PowerSnapshot, style: MenuBarIcon, colored: Bool) -> NSImage? {
-        guard style != .none else { return nil }
-        let name = style == .power ? s.powerSymbolName : s.symbolName
+        switch style {
+        case .none: return nil
+        case .battery:
+            return BrandGlyph(s.state).image(tint: colored ? color(s.symbolTone, colored: true) : .labelColor)
+        case .power: break
+        }
+        let name = s.powerSymbolName
         let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
         let base = NSImage(systemSymbolName: name, accessibilityDescription: s.state.title)?
             .withSymbolConfiguration(config)

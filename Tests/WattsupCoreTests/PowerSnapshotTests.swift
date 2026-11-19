@@ -84,7 +84,8 @@ final class PowerSnapshotTests: XCTestCase {
 
     func testUnits() {
         XCTAssertEqual(Units.watts(27.16, signed: true), "+27.2 W")
-        XCTAssertEqual(Units.watts(-12.0, signed: true), "-12.0 W")
+        XCTAssertEqual(Units.watts(-12.0, signed: true), "\u{2212}12.0 W")
+        XCTAssertEqual(Units.amps(-1.5), "\u{2212}1.50 A")
         XCTAssertEqual(Units.watts(0.01, signed: true), "0.0 W")
         XCTAssertEqual(Units.duration(minutes: 65), "1 h 5 min")
         XCTAssertEqual(Units.duration(minutes: 120), "2 h")

@@ -2,10 +2,14 @@ import Foundation
 
 /// Display formatting shared by the menu bar, popover, dashboard and CLI.
 public enum Units {
+    /// The true minus sign U+2212, which the brand uses for draining power.
+    public static let minus = "\u{2212}"
+
     public static func watts(_ w: Double?, signed: Bool = false, digits: Int = 1) -> String {
         guard let w else { return "n/a" }
-        let sign = signed && w > 0.05 ? "+" : ""
-        return sign + String(format: "%.\(digits)f W", abs(w) < 0.05 ? 0 : w)
+        let value = abs(w) < 0.05 ? 0 : w
+        let sign = value > 0 && signed ? "+" : value < 0 ? minus : ""
+        return sign + String(format: "%.\(digits)f W", abs(value))
     }
 
     public static func volts(_ v: Double?, digits: Int = 2) -> String {
@@ -15,7 +19,8 @@ public enum Units {
 
     public static func amps(_ a: Double?, digits: Int = 2) -> String {
         guard let a else { return "n/a" }
-        return String(format: "%.\(digits)f A", abs(a) < 0.005 ? 0 : a)
+        let value = abs(a) < 0.005 ? 0 : a
+        return (value < 0 ? minus : "") + String(format: "%.\(digits)f A", abs(value))
     }
 
     public static func percent(_ fraction: Double?, digits: Int = 0) -> String {

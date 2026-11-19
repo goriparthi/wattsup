@@ -37,6 +37,7 @@ struct DashboardView: View {
             }
         }
         .frame(minWidth: 900, minHeight: 640)
+        .tint(Theme.accent)
     }
 
     private func hero(_ s: PowerSnapshot) -> some View {
@@ -83,7 +84,7 @@ struct DashboardView: View {
             switch mode {
             case .power:
                 SeriesChart(series: Series.power(samples) + [
-                    LineSeries(name: "Mac would use", color: .secondary,
+                    LineSeries(name: "Mac would use", color: .secondary, dash: LineSeries.Pattern.warning,
                                points: samples.filter(\.isExternalPower).map { ($0.date, $0.demandWatts) }),
                 ], unit: "W", height: 220, showsZero: true, strideMinutes: range.stride)
             case .electrical:

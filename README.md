@@ -1,5 +1,7 @@
 # Wattsup
 
+![Wattsup: See watts up with your Mac.](brand/boards/08-README-Banner-1600x400.png)
+
 Live power telemetry for your MacBook, in the menu bar. Watts, volts and amps at a glance, a
 dashboard far deeper than the battery settings, and a charger check that tells you whether the
 brick you plugged in is holding your Mac back.
@@ -49,6 +51,7 @@ make install    # signed release build into ~/Applications, then launches it
 | `Tests/WattsupCoreTests` | Tests built from registry readings captured on a real MacBook. |
 | `scripts/` | Build, bundle, sign, install, CI. The Makefile only indexes these. |
 | `site/` | The marketing page, deployed to GitHub Pages on push to `main`. |
+| `brand/` | Brand kit: `BRAND.md` spec, logo and icon masters, boards. `Resources/Wattsup.icns` is built from it. |
 
 ## Why the numbers can be trusted
 

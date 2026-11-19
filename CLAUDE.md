@@ -12,8 +12,9 @@ Personal project, modeled on `../redline`. Read `README.md` for layout and comma
   only reads the registry and draws.
 - Never guess a number the user reads as fact. Undocumented reason codes are shown raw, and
   charger advice comes from measured values only, never a model lookup table.
-- Colors come from `Theme` in `Sources/wattsup/Components.swift`; it is a placeholder until the
-  brand kit lands.
+- Colors come from the brand tokens in `Sources/wattsup/Brand.swift` (spec: `brand/BRAND.md`).
+  Views read them through `Theme`; never hardcode a color. Chart series keep their brand dash
+  patterns so data reads without color.
 
 ## Checks
 

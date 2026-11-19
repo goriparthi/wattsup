@@ -1,4 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Wattsup">
-  <rect width="64" height="64" rx="14" fill="#0b1117"/>
-  <path d="M36 9 18 35h12l-3 20 19-28H34z" fill="#2dd4bf"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1024" height="1024" viewBox="0 0 1024 1024" role="img"><title>Wattsup app icon, Final</title><defs>
+<linearGradient id="tile" x2=".83" y2="1"><stop stop-color="#343768"/><stop offset=".62" stop-color="#24274F"/><stop offset="1" stop-color="#1D2043"/></linearGradient>
+<linearGradient id="edge" x2=".5" y2="1"><stop stop-color="#565887"/><stop offset=".55" stop-color="#393D68"/><stop offset="1" stop-color="#24274E"/></linearGradient>
+<linearGradient id="shadow" x2="0" y2="1"><stop stop-color="#0C102B" stop-opacity=".24"/><stop offset="1" stop-color="#0C102B" stop-opacity=".68"/></linearGradient>
+</defs><g transform="translate(0 11) scale(1)"><path d="M 310 62 H 714 C 875 62 962 145 962 310 V 714 C 962 875 879 962 714 962 H 310 C 149 962 62 879 62 714 V 310 C 62 149 145 62 310 62 Z" fill="url(#shadow)" /></g><path d="M 310 62 H 714 C 875 62 962 145 962 310 V 714 C 962 875 879 962 714 962 H 310 C 149 962 62 879 62 714 V 310 C 62 149 145 62 310 62 Z" fill="url(#tile)" stroke="url(#edge)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" /><path d="M 311 72 H 713 C 862 72 952 151 952 311" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".13"/><g transform="translate(175 157) scale(6.4)"><path d="M 12 56 H 26 C 33 56 36 51 40 43 L 45 34 C 48 28 54 28 57 35 L 68 61 C 71 68 76 69 81 63 L 85 58 C 88 55 90 54 94 54" fill="none" stroke="#D8F98B" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" /></g></svg>

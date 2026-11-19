@@ -49,7 +49,9 @@ public enum MenuBarMetric: String, CaseIterable, Codable, Identifiable, Sendable
         case .volts: return String(format: "%.2fV", s.busVolts)
         case .amps: return String(format: "%.2fA", s.busAmps)
         case .systemWatts: return String(format: "%.1fW", s.systemWatts)
-        case .batteryWatts: return String(format: "%+.1fW", s.batteryWatts)
+        case .batteryWatts:
+            let w = abs(s.batteryWatts) < 0.05 ? 0 : s.batteryWatts
+            return (w < 0 ? Units.minus : "+") + String(format: "%.1fW", abs(w))
         case .wallWatts: return s.wallWatts.map { String(format: "%.1fW", $0) }
         case .chargerLoad: return s.chargerLoad.map { String(format: "%.0f%%", $0 * 100) }
         case .percent: return "\(s.percent)%"

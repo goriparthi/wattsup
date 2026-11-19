@@ -63,7 +63,7 @@ public enum ChargeState: String, Equatable, Sendable {
         switch self {
         case .charging: return "Charging"
         case .full: return "Fully charged"
-        case .held: return "Plugged in, not charging"
+        case .held: return "Plugged in, charging on hold"
         case .discharging: return "On battery"
         }
     }

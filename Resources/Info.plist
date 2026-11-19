@@ -6,6 +6,8 @@
 	<string>Wattsup</string>
 	<key>CFBundleExecutable</key>
 	<string>wattsup</string>
+	<key>CFBundleIconFile</key>
+	<string>Wattsup</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.goriparthi.wattsup</string>
 	<key>CFBundleName</key>
