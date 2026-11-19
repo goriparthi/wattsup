@@ -9,5 +9,7 @@ let package = Package(
         .target(name: "WattsupCore"),
         .executableTarget(name: "wattsup", dependencies: ["WattsupCore"]),
         .testTarget(name: "WattsupCoreTests", dependencies: ["WattsupCore"]),
+        // App layer: the menu bar renderer and settings, tested through @testable import
+        .testTarget(name: "WattsupAppTests", dependencies: ["wattsup", "WattsupCore"]),
     ]
 )

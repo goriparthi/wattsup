@@ -28,7 +28,7 @@ final class AppSettings {
         static let metrics = "menuBarMetrics", order = "menuBarOrder", icon = "menuBarIcon", colors = "menuBarColors"
         static let layout = "menuBarLayout", autoUpdate = "checksForUpdates", outlined = "menuBarOutlined"
     }
-    private let defaults = UserDefaults.standard
+    private let defaults: UserDefaults
 
     /// Every reading in the user's order; the checkbox state lives in `shown`.
     var order: [MenuBarMetric] {
@@ -55,7 +55,9 @@ final class AppSettings {
     private(set) var launchesAtLogin = SMAppService.mainApp.status == .enabled
     private(set) var loginItemError: String?
 
-    init() {
+    /// Injectable so tests never touch the real preferences.
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         let saved = defaults.string(forKey: Key.metrics).map(MenuBarMetric.decode) ?? MenuBarMetric.defaults
         shown = Set(saved)
         // Builds before full ordering only saved the shown list; those lead, the rest follow
