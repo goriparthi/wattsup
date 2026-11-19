@@ -21,6 +21,11 @@ Personal project, modeled on `../redline`. Read `README.md` for layout and comma
 `make test` for the unit suite, `make ci` for everything CI runs. Verify UI changes by running
 the app (`make run`) and looking at it, not by reading the code.
 
+## Trying changes
+
+PG runs the release build from /Applications and updates in-app. Verify UI with the debug build
+(`.build/debug/wattsup --dashboard`, `--popover`, `--render-dashboard`); never `make install`.
+
 ## Deploying
 
 The site deploys from `site/` on push to `main`. App releases: bump `Resources/Info.plist`, write
