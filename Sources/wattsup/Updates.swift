@@ -20,6 +20,8 @@ enum Updates {
         case failed(String)
     }
 
+    static let noReleases = "No releases published yet"
+
     static var bundleVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
     }
@@ -32,7 +34,7 @@ enum Updates {
             let (data, resp) = try await URLSession.shared.data(for: req)
             let status = (resp as? HTTPURLResponse)?.statusCode ?? 0
             guard (200..<300).contains(status) else {
-                return .failed(status == 404 ? "No releases published yet" : "Update check failed (HTTP \(status))")
+                return .failed(status == 404 ? noReleases : "Update check failed (HTTP \(status))")
             }
             guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let tag = json["tag_name"] as? String,
@@ -222,7 +224,8 @@ final class UpdateController {
             if interactive { inform("You're up to date", "Wattsup \(Updates.bundleVersion) is the latest release.") }
         case .failed(let message):
             status = message
-            log.error("\(message)")
+            // An empty releases page is a normal state, not a failure worth flagging in diagnostics
+            if message == Updates.noReleases { log.info(message) } else { log.error(message) }
             if interactive { inform("Update check failed", message) }
         case .available(let version, let page, let dmg):
             status = "Update available: \(version)"

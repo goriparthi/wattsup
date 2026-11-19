@@ -88,7 +88,8 @@ per cell voltages and imbalance, and the charger log.
 ## Privacy
 
 Readings never leave the Mac. The only network request is a daily check of GitHub releases for an
-update, which can be turned off in Settings. Logs stay in `~/Library/Logs/Wattsup`.
+update. It is on by default and can be turned off from the gear menu (Check for Updates Daily) or
+Settings. An update installs only after you agree, and only if Apple notarized it. Logs stay in `~/Library/Logs/Wattsup`.
 
 ## The built in battery icon
 

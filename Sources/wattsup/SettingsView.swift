@@ -59,7 +59,7 @@ struct SettingsView: View {
                 }
             }
             Section {
-                Toggle("Check for updates automatically", isOn: Binding(get: { settings.checksForUpdates },
+                Toggle("Check for updates daily", isOn: Binding(get: { settings.checksForUpdates },
                                                                         set: { settings.checksForUpdates = $0 }))
                 HStack {
                     Text(updates.status).foregroundStyle(Theme.secondaryText)

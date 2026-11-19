@@ -107,6 +107,8 @@ struct SettingsMenu: View {
             Button("Settings…", action: actions.openSettings)
                 .keyboardShortcut(",")
             Button("Check for Updates…", action: actions.checkForUpdates)
+            Toggle("Check for Updates Daily", isOn: Binding(
+                get: { settings.checksForUpdates }, set: { settings.checksForUpdates = $0 }))
             Button("Battery Settings…", action: SystemSettings.openBattery)
             Button("Reveal Logs in Finder", action: Diagnostics.revealInFinder)
             Divider()
