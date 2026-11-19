@@ -605,6 +605,10 @@ struct EnergyCard: View {
                 .chartYAxis { AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) }
                 .chartXAxis { AxisMarks(values: .stride(by: .day)) { _ in AxisValueLabel(format: .dateTime.weekday(.abbreviated)) } }
                 .frame(height: 110)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Energy from the wall per day: " + week.map {
+                    "\($0.day.formatted(.dateTime.weekday(.wide))) \(EnergyAccount.format(wattHours: $0.wallWh))"
+                }.joined(separator: ", "))
             }
             Text("From the wall per day, integrated from one averaged reading per minute. Days without Wattsup running are not counted.")
                 .font(.caption)
@@ -637,6 +641,8 @@ struct HealthTrendView: View {
                 .chartYScale(domain: .automatic(includesZero: false))
                 .chartYAxis { AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) }
                 .frame(height: 70)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Battery health over time, from \(Units.percent(trend.points.first?.health, digits: 1)) to \(Units.percent(trend.points.last?.health, digits: 1))")
             }
             if trend.isCollecting {
                 Text("Collecting daily readings. A wear rate appears after two weeks, a projection once there is a clear trend.")

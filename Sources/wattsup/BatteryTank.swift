@@ -36,7 +36,8 @@ struct BatteryTank: View {
                 .strokeBorder(Color.primary.opacity(0.35), lineWidth: 2))
         }
         .accessibilityElement()
-        .accessibilityLabel("Battery \(snapshot.percent) percent, \(snapshot.state.title)")
+        .accessibilityLabel("Battery")
+        .accessibilityValue("\(snapshot.percent) percent, \(snapshot.statusLine)")
     }
 
     private func draw(in ctx: inout GraphicsContext, size: CGSize) {

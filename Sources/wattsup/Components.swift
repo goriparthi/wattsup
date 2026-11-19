@@ -165,6 +165,11 @@ struct SeriesChart: View {
     var showsLegend = true
     var strideMinutes = 1
 
+    private var accessibilitySummary: String {
+        let parts = series.compactMap { s in s.points.last.map { "\(s.name) \(String(format: "%g", ($0.value * 10).rounded() / 10)) \(unit)" } }
+        return parts.isEmpty ? "Chart, no data yet" : "Chart, latest: " + parts.joined(separator: ", ")
+    }
+
     var body: some View {
         Chart {
             ForEach(series) { s in
@@ -202,6 +207,9 @@ struct SeriesChart: View {
             }
         }
         .frame(height: height)
+        // VoiceOver hears the latest value of each line instead of an unlabeled chart
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilitySummary)
     }
 }
 
@@ -276,6 +284,8 @@ struct LoadBarTinted: View {
             }
         }
         .frame(height: 6)
+        .accessibilityElement()
+        .accessibilityValue(Units.percent(fraction))
     }
 }
 

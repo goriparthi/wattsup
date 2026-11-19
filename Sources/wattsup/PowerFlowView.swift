@@ -61,7 +61,20 @@ struct PowerFlowView: View {
             }
         }
         .frame(height: Layout.height(large: large, accessories: !snapshot.peripherals.isEmpty))
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(flowSummary)
+    }
+
+    /// One spoken sentence for the whole diagram, in the direction power actually flows.
+    private var flowSummary: String {
+        let s = snapshot
+        var parts: [String] = []
+        if s.isExternalPower { parts.append("Charger delivers \(Units.watts(s.inputWatts))") }
+        parts.append("Mac uses \(Units.watts(s.systemWatts))")
+        let b = s.batteryWatts
+        if abs(b) > 0.05 { parts.append(b > 0 ? "battery charging at \(Units.watts(b))" : "battery supplying \(Units.watts(-b))") }
+        if !s.peripherals.isEmpty { parts.append("accessories allocated up to \(Units.watts(s.peripherals.allocatedWatts, digits: 0))") }
+        return "Power flow: " + parts.joined(separator: ", ")
     }
 
     private var batteryTint: Color {
