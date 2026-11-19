@@ -5,6 +5,7 @@ import WattsupCore
 struct DashboardView: View {
     let monitor: PowerMonitor
     let settings: AppSettings
+    let visibility: MenuBarVisibility
     @State private var range: ChartRange = .fifteen
     @State private var mode: ChartMode = .power
 
@@ -12,6 +13,17 @@ struct DashboardView: View {
         ScrollView {
             if let s = monitor.snapshot {
                 VStack(alignment: .leading, spacing: 16) {
+                    if visibility.hidden {
+                        Label {
+                            Text("macOS is hiding the Wattsup readout because the menu bar is full or the notch covers it. Command drag a few items out of the menu bar to make room.")
+                        } icon: {
+                            Image(systemName: "eye.slash")
+                        }
+                        .font(.callout)
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(RoundedRectangle(cornerRadius: 8).fill(Theme.warning.opacity(0.12)))
+                    }
                     hero(s)
                     // The side column stacks the short cards so it fills the flow's height
                     HStack(alignment: .top, spacing: 16) {

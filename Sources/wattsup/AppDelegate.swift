@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let settings = AppSettings()
     private lazy var updates = UpdateController(settings: settings)
     private var settingsWindow: NSWindow?
+    private let visibility = MenuBarVisibility()
     private var statusItem: NSStatusItem!
     private let popover = NSPopover()
     private var dashboard: NSWindow?
@@ -37,6 +38,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         monitor.start()
         observeSettings()
         updates.start()
+        visibility.openDashboard = { [weak self] in self?.showDashboard() }
+        visibility.watch(statusItem)
 
         if CommandLine.arguments.contains("--dashboard") { showDashboard() }
         if CommandLine.arguments.contains("--settings") { showSettings() }
@@ -106,7 +109,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 backing: .buffered, defer: false)
             window.title = "Wattsup"
             window.isReleasedWhenClosed = false
-            window.contentView = NSHostingView(rootView: DashboardView(monitor: monitor, settings: settings))
+            window.contentView = NSHostingView(rootView: DashboardView(monitor: monitor, settings: settings, visibility: visibility))
             window.setFrameAutosaveName("WattsupDashboard")
             window.center()
             dashboard = window
