@@ -1,0 +1,71 @@
+name: Release
+
+# Builds, notarizes and publishes a release from GitHub instead of a laptop. What a release
+# is lives in scripts/release.sh; this only provides the signing identity and notary key.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release; must match Resources/Info.plist"
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-15
+    env:
+      KEYCHAIN: ${{ runner.temp }}/release.keychain-db
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the signing secrets exist
+        env:
+          P12: ${{ secrets.DEVELOPER_ID_P12 }}
+          KEY: ${{ secrets.NOTARY_KEY_P8 }}
+        run: |
+          [ -n "$P12" ] || { echo "Missing secret DEVELOPER_ID_P12; see docs/RELEASING.md"; exit 1; }
+          [ -n "$KEY" ] || { echo "Missing secret NOTARY_KEY_P8; see docs/RELEASING.md"; exit 1; }
+
+      - name: Import the Developer ID certificate
+        env:
+          P12: ${{ secrets.DEVELOPER_ID_P12 }}
+          P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+        run: |
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 3600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          echo "$P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$P12_PASSWORD" -T /usr/bin/codesign
+          rm -f "$RUNNER_TEMP/cert.p12"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          security default-keychain -s "$KEYCHAIN"
+
+      - name: Store the notary key
+        env:
+          KEY: ${{ secrets.NOTARY_KEY_P8 }}
+          KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          ISSUER: ${{ secrets.NOTARY_ISSUER_ID }}
+        run: |
+          echo "$KEY" | base64 --decode > "$RUNNER_TEMP/notary.p8"
+          xcrun notarytool store-credentials wattsup-ci --key "$RUNNER_TEMP/notary.p8" \
+            --key-id "$KEY_ID" --issuer "$ISSUER" --keychain "$KEYCHAIN"
+          rm -f "$RUNNER_TEMP/notary.p8"
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NOTARY_PROFILE: wattsup-ci
+          RELEASE_FROM_CI: "1"
+        run: scripts/release.sh "${{ inputs.version }}"
+
+      - name: Remove the keychain
+        if: always()
+        run: security delete-keychain "$KEYCHAIN" || true

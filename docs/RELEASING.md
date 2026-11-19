@@ -22,3 +22,17 @@ confirm before publishing.
 notarized when `NOTARY_PROFILE` is set. A DMG in `dist/` is not a release.
 
 The site deploys separately from `site/` on every push to `main`.
+
+## From GitHub Actions
+
+Actions, **Release**, Run workflow, enter the version. It runs the same `scripts/release.sh` on a
+clean macOS runner. It needs these repository secrets (Settings, Secrets and variables, Actions):
+
+| Secret | What it is |
+| --- | --- |
+| `DEVELOPER_ID_P12` | The Developer ID Application certificate and private key, exported from Keychain Access as .p12, then `base64 -i cert.p12 \| pbcopy` |
+| `DEVELOPER_ID_P12_PASSWORD` | The password chosen when exporting the .p12 |
+| `NOTARY_KEY_P8` | An App Store Connect API key (Users and Access, Integrations, Developer role) as `base64 -i AuthKey_XXXX.p8` |
+| `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID` | The key's ID and the issuer ID shown on the same page |
+
+The certificate lives only in a temporary keychain that is deleted when the job ends.
