@@ -62,14 +62,14 @@ public enum MenuBarMetric: String, CaseIterable, Codable, Identifiable, Sendable
     /// Short reading for the status item, or nil when it has nothing to say right now.
     public func text(for s: PowerSnapshot) -> String? {
         switch self {
-        case .watts: return String(format: "%.1fW", s.headlineWatts)
+        case .watts: return String(format: "%.1fW", Units.clean(s.headlineWatts))
         case .volts: return String(format: "%.2fV", s.busVolts)
-        case .amps: return String(format: "%.2fA", s.busAmps)
-        case .systemWatts: return String(format: "%.1fW", s.systemWatts)
+        case .amps: return String(format: "%.2fA", Units.clean(s.busAmps, digits: 2))
+        case .systemWatts: return String(format: "%.1fW", Units.clean(s.systemWatts))
         case .batteryWatts:
             let w = abs(s.batteryWatts) < 0.05 ? 0 : s.batteryWatts
             return (w < 0 ? Units.minus : "+") + String(format: "%.1fW", abs(w))
-        case .wallWatts: return s.wallWatts.map { String(format: "%.1fW", $0) }
+        case .wallWatts: return s.wallWatts.map { String(format: "%.1fW", Units.clean($0)) }
         case .adapterLoss: return s.adapterLossWatts.flatMap { $0 > 0 ? String(format: "%.1fW", $0) : nil }
         case .chargerLoad: return s.chargerLoad.map { String(format: "%.0f%%", $0 * 100) }
         case .percent: return "\(s.percent)%"

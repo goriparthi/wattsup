@@ -111,7 +111,7 @@ public struct PowerSnapshot: Equatable, Sendable {
 
     /// On battery the pack is the only source, yet for a few seconds after unplugging the
     /// current still reads as charging. Such a reading is stale, not real.
-    public var batteryReadingIsStale: Bool { !isExternalPower && batteryAmps > 0 }
+    public var batteryReadingIsStale: Bool { !isExternalPower && batteryAmps > -0.02 }
 
     public var batteryWatts: Double {
         if batteryReadingIsStale { return -(systemLoadWatts ?? 0) }
@@ -121,7 +121,7 @@ public struct PowerSnapshot: Equatable, Sendable {
     /// Power the Mac itself uses. On battery the pack is the only source, so its own reading
     /// keeps both legs of the flow equal; the controller's load figure is a smoothed average.
     public var systemWatts: Double {
-        if !isExternalPower { return max(0, -batteryWatts) }
+        if !isExternalPower { return max(0.0, -batteryWatts) + 0 }
         if let systemLoadWatts, systemLoadWatts > 0 { return systemLoadWatts }
         return max(0, (inputWatts ?? 0) - batteryWatts)
     }

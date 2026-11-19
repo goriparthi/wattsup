@@ -12,6 +12,13 @@ public enum Units {
         return sign + String(format: "%.\(digits)f W", abs(value))
     }
 
+    /// Rounds to `digits` and clears the sign on zero, so a reading never shows "-0.0".
+    public static func clean(_ v: Double, digits: Int = 1) -> Double {
+        let scale = pow(10, Double(digits))
+        let r = (v * scale).rounded() / scale
+        return r == 0 ? 0 : r
+    }
+
     public static func volts(_ v: Double?, digits: Int = 2) -> String {
         guard let v else { return "n/a" }
         return String(format: "%.\(digits)f V", v)

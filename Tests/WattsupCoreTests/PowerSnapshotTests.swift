@@ -57,6 +57,14 @@ final class PowerSnapshotTests: XCTestCase {
         XCTAssertEqual(MenuBarMetric.batteryWatts.tone(for: s), .draining)
     }
 
+    func testNoNegativeZeroAndZeroCurrentOnBatteryUsesLoad() {
+        let s = Fixture.snapshot(Fixture.discharging(amps: 0))
+        XCTAssertEqual(s.systemWatts, 18.6, accuracy: 0.001, "zero current right after unplugging falls back to the load")
+        XCTAssertEqual(MenuBarMetric.systemWatts.text(for: s), "18.6W")
+        XCTAssertEqual(Units.clean(-0.04), 0)
+        XCTAssertEqual(String(format: "%.1f", Units.clean(-0.0)), "0.0")
+    }
+
     func testWattsupEstimatesWhenMacOSStops() {
         var d = Fixture.charging()
         d["AvgTimeToFull"] = 65535
