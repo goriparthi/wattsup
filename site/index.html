@@ -5,9 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Wattsup: live power telemetry for your Mac</title>
 <meta name="description" content="Wattsup is a free, open source macOS menu bar app that shows live charger, Mac and battery power, checks your charger and cable, and keeps every reading on your Mac.">
-<meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#F4F6FB" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#111427" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0A0B0E">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Wattsup">
 <meta property="og:title" content="Wattsup: live power telemetry for your Mac">
@@ -27,22 +26,15 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&amp;display=swap" rel="stylesheet">
 <style>
-/* Brand tokens from brand/BRAND.md. Light is the base; dark overrides below. */
+/* Dark only, on neutral near black: brand iris is the single accent, data colors stay in screenshots */
 :root{
-  --canvas:#F4F6FB; --elevated:#FFFFFF;
-  --text:#171A2C; --muted:#4D5770; --iris:#4835A5; --on-iris:#FFFFFF;
-  --line:#DDE1EC; --line-strong:#C6CCDC; --subtle:#EBEEF6;
-  --shot-shadow:0 1px 2px rgba(23,26,44,.06),0 12px 32px rgba(23,26,44,.10);
+  color-scheme:dark;
+  --canvas:#0A0B0E; --elevated:#121419; --raised:#171A20;
+  --text:#EEF0F5; --muted:#A4AAB8; --iris:#C5B8FF; --on-iris:#0A0B0E;
+  --line:#22252D; --line-strong:#30343E; --subtle:#0F1115;
+  --shot-shadow:0 0 0 1px rgba(255,255,255,.06),0 24px 64px rgba(0,0,0,.55);
   --sans:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
   --pad:clamp(16px,4vw,48px); --max:1280px;
-}
-@media (prefers-color-scheme: dark){
-  :root{
-    --canvas:#111427; --elevated:#1C2138;
-    --text:#F3F5FE; --muted:#B2BAD4; --iris:#C5B8FF; --on-iris:#111427;
-    --line:#2A3050; --line-strong:#3A4166; --subtle:#171B31;
-    --shot-shadow:0 1px 2px rgba(0,0,0,.3),0 16px 40px rgba(0,0,0,.35);
-  }
 }
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -92,7 +84,9 @@ figure{margin:0}
 figcaption{margin-top:14px;font-size:14px;color:var(--muted);line-height:1.5}
 
 /* Hero */
-.hero{padding:clamp(56px,9vw,112px) 0 0;text-align:center}
+.hero{padding:clamp(56px,9vw,112px) 0 0;text-align:center;position:relative;isolation:isolate}
+.hero::before{content:"";position:absolute;inset:-10% 0 auto;height:720px;z-index:-1;pointer-events:none;
+  background:radial-gradient(ellipse 60% 55% at 50% 0%,rgba(197,184,255,.10),transparent 70%)}
 .hero-copy{max-width:760px;margin:0 auto}
 .hero .lede{text-wrap:pretty;margin:24px auto 0;max-width:620px;font-size:clamp(18px,1.6vw,20px);color:var(--muted);line-height:1.6}
 .hero .actions{justify-content:center;margin-top:36px}
@@ -236,8 +230,7 @@ figcaption{margin-top:14px;font-size:14px;color:var(--muted);line-height:1.5}
   <div class="container nav">
     <a class="brand" href="#top" aria-label="Wattsup home">
       <picture>
-        <source srcset="logo-dark.svg" media="(prefers-color-scheme: dark)">
-        <img src="logo-light.svg" alt="Wattsup" width="132" height="26">
+        <img src="logo-dark.svg" alt="Wattsup" width="132" height="26">
       </picture>
     </a>
     <nav aria-label="Primary">
@@ -310,7 +303,7 @@ figcaption{margin-top:14px;font-size:14px;color:var(--muted);line-height:1.5}
         <p>Click the menu bar readout for a popover that shows where every watt is going. Charger, Mac and battery are joined by pipes whose thickness follows the watts, in the real direction of flow, the way a hybrid car shows its energy.</p>
         <ul class="checklist">
           <li><strong>Power flow.</strong> Battery to Mac when unplugged, charger to Mac and battery when plugged in. Powered accessories branch off the Mac.</li>
-          <li><strong>Battery tank.</strong> The level is the charge; bubbles rise while charging and drops fall while draining.</li>
+          <li><strong>Battery level.</strong> A gauge whose surface moves while power flows, faster the more watts move in or out.</li>
           <li><strong>Charger check.</strong> A plain verdict, a five minute chart, then grouped details for charger, battery and Mac.</li>
           <li><strong>Reduce Motion aware.</strong> With it on, animations hold still and arrows show direction.</li>
         </ul>
@@ -529,8 +522,7 @@ figcaption{margin-top:14px;font-size:14px;color:var(--muted);line-height:1.5}
   <div class="container footer-row">
     <div class="footer-brand">
       <picture>
-        <source srcset="logo-dark.svg" media="(prefers-color-scheme: dark)">
-        <img src="logo-light.svg" alt="Wattsup" width="122" height="24" loading="lazy">
+        <img src="logo-dark.svg" alt="Wattsup" width="122" height="24" loading="lazy">
       </picture>
       <p>See watts up with your Mac. Free software under the MIT license.</p>
     </div>

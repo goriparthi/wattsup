@@ -278,6 +278,13 @@ struct BatteryCard: View {
             StatRow(label: "Charge", value: "\(Units.mAh(s.remainingCapacity)) of \(Units.mAh(s.fullChargeCapacity))")
             StatRow(label: "Health", value: "\(Units.percent(s.health, digits: 1)) of \(Units.mAh(s.designCapacity)) design",
                     tint: (s.health ?? 1) < 0.8 ? Theme.warning : nil)
+            if let full = s.fullEnergyWh, let design = s.designEnergyWh {
+                StatRow(label: "Capacity", value: String(format: "about %.0f Wh of %.0f Wh design", full, design))
+            }
+            if let left = s.remainingEnergyWh {
+                StatRow(label: "Stored now", value: String(format: "about %.0f Wh", left)
+                        + (s.runtimeHoursAtCurrentDraw.map { ", \(Units.duration(minutes: Int($0 * 60))) at \(Units.watts(s.systemWatts, digits: 0))" } ?? ""))
+            }
             if let cycles = s.cycleCount {
                 StatRow(label: "Cycles", value: s.designCycleCount.map { "\(cycles) of \($0) rated" } ?? "\(cycles)")
             }
@@ -307,6 +314,19 @@ struct BatteryCard: View {
             }
             Divider()
             HealthTrendView(trend: trend)
+            if let life = s.lifetime {
+                Divider()
+                Text("Lifetime, as the battery recorded it").font(Theme.Style(large: true).caption).foregroundStyle(Theme.Style(large: true).secondary)
+                if let a = life.maxDischargeAmps {
+                    StatRow(label: "Highest draw", value: Units.amps(a) + (s.peakDischargeWatts.map { String(format: ", about %.0f W", $0) } ?? ""))
+                }
+                if let a = life.maxChargeAmps { StatRow(label: "Highest charge current", value: Units.amps(a)) }
+                if let lo = life.minTempC, let hi = life.maxTempC {
+                    StatRow(label: "Temperature range", value: String(format: "%.0f to %.0f °C", lo, hi)
+                            + (life.averageTempC.map { String(format: ", average %.1f", $0) } ?? ""))
+                }
+                if let h = life.operatingHours { StatRow(label: "Operating time", value: "\(h.formatted()) hours") }
+            }
             if !s.cellVolts.isEmpty {
                 Divider()
                 HStack {

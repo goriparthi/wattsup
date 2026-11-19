@@ -110,6 +110,8 @@ public struct PowerSnapshot: Equatable, Sendable {
     public var peripherals: [Peripheral] = []
     /// Fans and chip temperatures from the SMC; nil where unavailable.
     public var thermals: Thermals? = nil
+    /// Lifetime extremes recorded by the battery controller.
+    public var lifetime: BatteryLifetime? = nil
 
     /// On battery the pack is the only source, yet for a few seconds after unplugging the
     /// current still reads as charging. Such a reading is stale, not real.
@@ -254,6 +256,7 @@ public extension PowerSnapshot {
             slowChargingReason: charger.int("SlowChargingReason") ?? 0,
             thermallyLimitedSeconds: charger.int("TimeChargingThermallyLimited")
         )
+        lifetime = (battery.dict("LifetimeData") ?? d.dict("LifetimeData")).flatMap(BatteryLifetime.init)
     }
 
     /// The controller reports 65535 while estimating and 0 when it has no figure.
