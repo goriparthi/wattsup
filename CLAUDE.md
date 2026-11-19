@@ -26,6 +26,12 @@ the app (`make run`) and looking at it, not by reading the code.
 PG runs the release build from /Applications and updates in-app. Verify UI with the debug build
 (`.build/debug/wattsup --dashboard`, `--popover`, `--render-dashboard`); never `make install`.
 
+## Release speed
+
+Local `make ci` is the gate; it runs the same checks as GitHub CI. Never wait on GitHub's runners
+before releasing, they are advisory. Once PG says release, ship what is ready and put anything new
+into the next version instead of widening the pending one.
+
 ## Deploying
 
 The site deploys from `site/` on push to `main`. App releases: bump `Resources/Info.plist`, write
