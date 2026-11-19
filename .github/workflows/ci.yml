@@ -1,0 +1,20 @@
+name: CI
+
+# When the checks run lives here; what they are lives in scripts/ci.sh, so `make ci` reproduces any failure.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run the check suite
+        run: make ci
