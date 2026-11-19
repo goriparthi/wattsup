@@ -27,7 +27,7 @@ final class AppSettings {
     private enum Key {
         static let metrics = "menuBarMetrics", order = "menuBarOrder", icon = "menuBarIcon", colors = "menuBarColors"
         static let layout = "menuBarLayout", autoUpdate = "checksForUpdates", outlined = "menuBarOutlined"
-        static let alerts = "alerts", chargedLevel = "chargedAlertLevel"
+        static let alerts = "alerts", chargedLevel = "chargedAlertLevel", price = "electricityPricePerKWh"
     }
     private let defaults: UserDefaults
 
@@ -54,6 +54,8 @@ final class AppSettings {
     var checksForUpdates: Bool { didSet { defaults.set(checksForUpdates, forKey: Key.autoUpdate) } }
     var alerts: Set<AlertKind> { didSet { defaults.set(alerts.map(\.rawValue).sorted(), forKey: Key.alerts) } }
     var chargedAlertLevel: Int { didSet { defaults.set(chargedAlertLevel, forKey: Key.chargedLevel) } }
+    /// Optional, in the local currency; zero or unset hides cost.
+    var pricePerKWh: Double { didSet { defaults.set(pricePerKWh, forKey: Key.price) } }
 
     private(set) var launchesAtLogin = SMAppService.mainApp.status == .enabled
     private(set) var loginItemError: String?
@@ -73,6 +75,7 @@ final class AppSettings {
         alerts = (defaults.array(forKey: Key.alerts) as? [String]).map { Set($0.compactMap(AlertKind.init)) }
             ?? Set(AlertKind.allCases.filter(\.enabledByDefault))
         chargedAlertLevel = defaults.object(forKey: Key.chargedLevel) as? Int ?? 80
+        pricePerKWh = defaults.double(forKey: Key.price)
     }
 
     /// Showing or hiding a reading never moves it; its place in the order is kept.

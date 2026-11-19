@@ -74,6 +74,23 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundStyle(Theme.secondaryText)
             }
+            Section {
+                HStack {
+                    Text("Electricity price")
+                    Spacer()
+                    TextField("0.00", value: Binding(get: { settings.pricePerKWh }, set: { settings.pricePerKWh = max(0, $0) }),
+                              format: .number.precision(.fractionLength(0...3)))
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 80)
+                    Text("\(Locale.current.currency?.identifier ?? "") per kWh").foregroundStyle(Theme.secondaryText)
+                }
+            } header: {
+                Text("Energy cost")
+            } footer: {
+                Text("Optional. Used only to estimate the cost of what your charger draws from the wall.")
+                    .font(.caption)
+                    .foregroundStyle(Theme.secondaryText)
+            }
             Section("General") {
                 Toggle("Open at login", isOn: Binding(get: { settings.launchesAtLogin },
                                                       set: { settings.setLaunchesAtLogin($0) }))

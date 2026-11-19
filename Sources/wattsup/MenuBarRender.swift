@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import WattsupCore
 
 /// `wattsup --render-menubar <dir>`: draws the readout in each layout from a live reading,
@@ -65,5 +66,33 @@ enum MenuBarRender {
             NSGraphicsContext.restoreGraphicsState()
         }
         try? rep.representation(using: .png, properties: [:])?.write(to: file)
+    }
+}
+
+/// `wattsup --render-dashboard <file.png>`: the full dashboard, live data included, as one image,
+/// so the lower cards can be checked without scrolling a window.
+@MainActor
+enum DashboardRender {
+    static func run(file: String) -> Int32 {
+        let monitor = PowerMonitor()
+        let settings = AppSettings()
+        monitor.refresh()
+        monitor.impact.viewerAppeared()
+        // Let the thermals and energy readers finish one pass
+        RunLoop.main.run(until: Date().addingTimeInterval(4))
+        monitor.refresh()
+        let view = DashboardView(monitor: monitor, settings: settings, visibility: MenuBarVisibility(), rendering: true)
+            .frame(width: 1040)
+            .environment(\.colorScheme, .dark)
+        let renderer = ImageRenderer(content: view)
+        renderer.scale = 2
+        guard let image = renderer.nsImage, let tiff = image.tiffRepresentation,
+              let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) else {
+            FileHandle.standardError.write(Data("could not render the dashboard\n".utf8))
+            return 1
+        }
+        do { try png.write(to: URL(fileURLWithPath: file)) } catch { return 1 }
+        print("Rendered \(file) at \(Int(image.size.width))x\(Int(image.size.height))")
+        return 0
     }
 }

@@ -16,7 +16,7 @@ final class PowerMonitor {
     private(set) var assessment: ChargerAssessment?
     private(set) var chargers: ChargerLog
     private(set) var quality: ChargerQuality?
-    /// Stored minutes from the last week, for the 24 h and 7 d charts and energy totals.
+    /// Stored minutes from the last 30 days, for the long charts and energy totals.
     private(set) var archive: [PowerSample] = []
 
     @ObservationIgnored var onUpdate: (() -> Void)?
@@ -39,7 +39,8 @@ final class PowerMonitor {
 
     init() {
         chargers = store.load()
-        archive = historyStore.load(days: 7)
+        chargers.pruneTransient()
+        archive = historyStore.load(days: HistoryStore.keepDays)
         historyStore.prune()
     }
 
@@ -85,11 +86,12 @@ final class PowerMonitor {
             if let minute = minutes.add(PowerSample(s)) {
                 historyStore.append(minute)
                 archive.append(minute)
-                let cutoff = s.date.addingTimeInterval(-7 * 86400)
+                let cutoff = s.date.addingTimeInterval(-Double(HistoryStore.keepDays) * 86400)
                 if let first = archive.firstIndex(where: { $0.date >= cutoff }), first > 0 { archive.removeFirst(first) }
             }
             let a = ChargerAssessment(snapshot: s, history: history, known: chargers.records)
-            chargers.record(s, verdict: a.verdict.isSettled ? a.headline : nil)
+            // Nothing is logged while the charger is still negotiating its real power profile
+            if a.verdict != .negotiating { chargers.record(s, verdict: a.verdict.isSettled ? a.headline : nil) }
             trackDropouts(from: snapshot, to: s)
             updateQuality(s)
             logTransitions(from: snapshot, to: s, verdict: a)

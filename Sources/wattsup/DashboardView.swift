@@ -1,3 +1,4 @@
+import Charts
 import SwiftUI
 import WattsupCore
 
@@ -6,11 +7,23 @@ struct DashboardView: View {
     let monitor: PowerMonitor
     let settings: AppSettings
     let visibility: MenuBarVisibility
+    /// Rendering to an image needs the content without its scroll view
+    var rendering = false
     @State private var range: ChartRange = .fifteen
     @State private var mode: ChartMode = .power
 
     var body: some View {
-        ScrollView {
+        if rendering { content.background(Theme.canvas) } else {
+            ScrollView { content }
+                .frame(minWidth: 900, minHeight: 640)
+                .background(Theme.canvas)
+                .tint(Theme.accent)
+                .onAppear { monitor.impact.viewerAppeared() }
+                .onDisappear { monitor.impact.viewerDisappeared() }
+        }
+    }
+
+    @ViewBuilder private var content: some View {
             if let s = monitor.snapshot {
                 VStack(alignment: .leading, spacing: 16) {
                     if visibility.hidden {
@@ -58,7 +71,11 @@ struct DashboardView: View {
                         if let t = s.thermals { ThermalsCard(thermals: t, batteryC: s.temperatureC) }
                     }
                     .fixedSize(horizontal: false, vertical: true)
-                    EnergyByAppCard(impact: monitor.impact)
+                    HStack(alignment: .top, spacing: 16) {
+                        EnergyCard(days: EnergyAccount.daily(monitor.archive), price: settings.pricePerKWh)
+                        EnergyByAppCard(impact: monitor.impact)
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
                     ChargerHistoryCard(chargers: monitor.chargers.sorted,
                                        current: s.adapter?.fingerprint,
                                        forget: monitor.forgetCharger)
@@ -67,12 +84,6 @@ struct DashboardView: View {
             } else {
                 UnavailableView(availability: monitor.availability).padding(40)
             }
-        }
-        .frame(minWidth: 900, minHeight: 640)
-        .onAppear { monitor.impact.viewerAppeared() }
-        .onDisappear { monitor.impact.viewerDisappeared() }
-        .background(Theme.canvas)
-        .tint(Theme.accent)
     }
 
     private func hero(_ s: PowerSnapshot) -> some View {
@@ -542,6 +553,47 @@ struct EnergyByAppCard: View {
                 .font(.caption)
                 .foregroundStyle(Theme.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+/// Watt hours per day from the stored minutes, with an optional cost at the user's price.
+struct EnergyCard: View {
+    let days: [DayEnergy]
+    let price: Double
+
+    var body: some View {
+        let week = Array(days.suffix(7))
+        let month = EnergyAccount.total(days)
+        let today = days.last.flatMap { Calendar.current.isDateInToday($0.day) ? $0 : nil }
+        Card(title: "Energy", symbol: "bolt.batteryblock") {
+            HStack(alignment: .top, spacing: 24) {
+                figure("Today from the wall", today.map { EnergyAccount.format(wattHours: $0.wallWh) } ?? "0 Wh")
+                figure("Mac used today", today.map { EnergyAccount.format(wattHours: $0.macWh) } ?? "0 Wh")
+                figure("Last 30 days", EnergyAccount.format(wattHours: month.wallWh),
+                       detail: price > 0 ? month.cost(perKWh: price).map { $0.formatted(.currency(code: Locale.current.currency?.identifier ?? "USD")) } : nil)
+            }
+            if week.count > 1 {
+                Chart(week) { d in
+                    BarMark(x: .value("Day", d.day, unit: .day), y: .value("Wh", d.wallWh))
+                        .foregroundStyle(Theme.input)
+                }
+                .chartYAxis { AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) }
+                .chartXAxis { AxisMarks(values: .stride(by: .day)) { _ in AxisValueLabel(format: .dateTime.weekday(.abbreviated)) } }
+                .frame(height: 110)
+            }
+            Text("From the wall per day, integrated from one averaged reading per minute. Days without Wattsup running are not counted.")
+                .font(.caption)
+                .foregroundStyle(Theme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func figure(_ label: String, _ value: String, detail: String? = nil) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label).font(.caption).foregroundStyle(Theme.secondaryText)
+            Text(value).font(.title3.weight(.semibold)).monospacedDigit()
+            if let detail { Text(detail).font(.caption).foregroundStyle(Theme.secondaryText) }
         }
     }
 }

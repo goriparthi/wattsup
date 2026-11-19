@@ -94,6 +94,14 @@ public struct ChargerLog: Codable, Equatable, Sendable {
         if let s = q.sagFraction { records[i].sagFraction = s }
     }
 
+    /// Drops entries that were only a moment of plug in negotiation (a brief 5 V profile before
+    /// the real one), never judged and seen for under 20 seconds, once they are an hour old.
+    public mutating func pruneTransient(now: Date = Date()) {
+        records.removeAll {
+            $0.lastVerdict == nil && $0.secondsConnected < 20 && now.timeIntervalSince($0.lastSeen) > 3600
+        }
+    }
+
     public mutating func forget(_ fingerprint: String) {
         records.removeAll { $0.fingerprint == fingerprint }
     }

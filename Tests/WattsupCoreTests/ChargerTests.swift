@@ -100,6 +100,19 @@ final class ChargerTests: XCTestCase {
         XCTAssertFalse(ChargerAssessment.looksCableCapped(Fixture.snapshot(Fixture.charging()).adapter!))
     }
 
+    func testTransientNegotiationEntriesArePruned() {
+        var log = ChargerLog()
+        log.record(Fixture.snapshot(Fixture.charging(), at: 0), verdict: nil)
+        log.record(Fixture.snapshot(Fixture.charging(), at: 2), verdict: nil)
+        log.pruneTransient(now: Date(timeIntervalSinceReferenceDate: 600))
+        XCTAssertEqual(log.records.count, 1, "kept while still recent")
+        log.pruneTransient(now: Date(timeIntervalSinceReferenceDate: 4000))
+        XCTAssertTrue(log.records.isEmpty, "a 2 second never judged entry is negotiation noise")
+        log.record(Fixture.snapshot(Fixture.charging(), at: 0), verdict: "Charger has headroom")
+        log.pruneTransient(now: Date(timeIntervalSinceReferenceDate: 9000))
+        XCTAssertEqual(log.records.count, 1, "judged chargers are never pruned")
+    }
+
     func testSuggestedSizes() {
         XCTAssertEqual(ChargerAssessment.suggestedSize(forDemand: 25), 30)
         XCTAssertEqual(ChargerAssessment.suggestedSize(forDemand: 58), 65)

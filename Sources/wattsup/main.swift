@@ -23,6 +23,9 @@ case "--thermals":
     print("SMC keys: \(keys.count), chip sensors: \(chips.count)")
     for f in t.fans { print("\(f.name(of: t.fans.count)): \(Int(f.rpm)) rpm (range \(Int(f.minRPM ?? 0)) to \(Int(f.maxRPM ?? 0)))") }
     print(String(format: "CPU %.1f C (hottest %.1f), GPU %.1f C", t.cpuC ?? -1, t.cpuHottestC ?? -1, t.gpuC ?? -1))
+case "--render-dashboard":
+    let file = CommandLine.arguments.dropFirst(2).first ?? "dist/dashboard.png"
+    exit(MainActor.assumeIsolated { DashboardRender.run(file: file) })
 case "--diagnostics":
     Diagnostics.printReport()
 case "--help", "-h":
