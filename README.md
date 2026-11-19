@@ -42,7 +42,8 @@ macOS 14 or later on an Apple silicon MacBook. Xcode for building and testing.
 ```sh
 make run        # debug build, opens the dashboard
 make test       # unit tests
-make install    # signed release build into ~/Applications, then launches it
+make install    # signed build with the desktop widget into ~/Applications, then launches it
+make widget     # app plus widget via Xcode (needs Xcode and xcodegen)
 .build/debug/wattsup --snapshot      # one reading as text
 .build/debug/wattsup --diagnostics   # log folder, crash reports, recent log
 ```
@@ -57,6 +58,7 @@ make install    # signed release build into ~/Applications, then launches it
 | `Sources/wattsup` | The app: IOKit reader, monitor, status item, popover, dashboard. |
 | `Tests/WattsupCoreTests` | Tests built from registry readings captured on a real MacBook. |
 | `scripts/` | Build, bundle, sign, install, CI. The Makefile only indexes these. |
+| `Sources/WattsupWidget` | The desktop widget; built through `project.yml` (XcodeGen), since SwiftPM cannot build extensions. |
 | `site/` | The marketing page, deployed to GitHub Pages on push to `main`. |
 | `brand/` | Brand kit: `BRAND.md` spec, logo and icon masters, boards. `Resources/Wattsup.icns` is built from it. |
 

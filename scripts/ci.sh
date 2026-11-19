@@ -14,4 +14,12 @@ step "Release notes"; "$REPO_ROOT/scripts/check-notes.sh" --allow-missing
 step "Unit tests"; "$REPO_ROOT/scripts/test.sh"
 step "Bundle"; "$REPO_ROOT/scripts/bundle.sh"
 step "Verify bundle"; "$REPO_ROOT/scripts/verify-bundle.sh"
+if command -v xcodegen >/dev/null && [[ -d "${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}/Platforms" ]]; then
+    step "App with widget (ad hoc)"
+    SIGN=no "$REPO_ROOT/scripts/build-widget.sh"
+    [[ -d "$APP_BUNDLE/Contents/PlugIns/WattsupWidget.appex" ]] || die "widget missing from the bundle"
+    "$REPO_ROOT/scripts/verify-bundle.sh"
+else
+    warn "xcodegen or Xcode missing; skipping the widget build"
+fi
 info "All checks passed"

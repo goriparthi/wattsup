@@ -4,3 +4,5 @@ dist/
 xcuserdata/
 *.dSYM
 .DS_Store
+# Generated from project.yml by xcodegen
+Wattsup.xcodeproj/

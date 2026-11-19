@@ -1,0 +1,65 @@
+# XcodeGen manifest for Wattsup.xcodeproj: the app plus its desktop widget. SwiftPM cannot
+# build app extensions; Package.swift stays the source of truth for tests and quick builds.
+name: Wattsup
+options:
+  bundleIdPrefix: com.goriparthi
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ${WATTSUP_TEAM_ID}
+    MARKETING_VERSION: "0.0.1"
+    CURRENT_PROJECT_VERSION: "0.0.1"
+
+targets:
+  WattsupCore:
+    type: framework
+    platform: macOS
+    sources:
+      - path: Sources/WattsupCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.goriparthi.wattsup.core
+        PRODUCT_NAME: WattsupCore
+        DEFINES_MODULE: YES
+        INFOPLIST_FILE: Resources/WattsupCore-Info.plist
+
+  Wattsup:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/wattsup
+      - path: Resources/Wattsup.icns
+        buildPhase: resources
+    dependencies:
+      - target: WattsupCore
+        embed: true
+      - target: WattsupWidget
+        embed: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.goriparthi.wattsup
+        PRODUCT_NAME: Wattsup
+        # Bundle is Wattsup.app, binary stays lowercase to match the SwiftPM build
+        EXECUTABLE_NAME: wattsup
+        INFOPLIST_FILE: Resources/Info.plist
+        ENABLE_HARDENED_RUNTIME: YES
+
+  WattsupWidget:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: Sources/WattsupWidget
+    dependencies:
+      - target: WattsupCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.goriparthi.wattsup.widget
+        PRODUCT_NAME: WattsupWidget
+        INFOPLIST_FILE: Sources/WattsupWidget/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Sources/WattsupWidget/WattsupWidget.entitlements
+        ENABLE_HARDENED_RUNTIME: YES

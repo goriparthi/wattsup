@@ -24,6 +24,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install xcodegen
+        run: brew install xcodegen
+
       - name: Check the signing secrets exist
         env:
           P12: ${{ secrets.DEVELOPER_ID_P12 }}

@@ -2,6 +2,7 @@ import Foundation
 import IOKit.ps
 import Observation
 import WattsupCore
+import WidgetKit
 
 /// Polls the battery controller, keeps history, and judges the charger. One per app.
 @MainActor @Observable
@@ -37,6 +38,7 @@ final class PowerMonitor {
     @ObservationIgnored private let historyStore = HistoryStore()
     @ObservationIgnored private var minutes = MinuteAggregator()
     @ObservationIgnored private let healthStore = HealthStore()
+    @ObservationIgnored private var lastWidget: WidgetSnapshot?
     private static let peripheralScanEvery = 3
     /// Starts due, so the first reading already includes attached devices
     @ObservationIgnored private var ticksSincePeripheralScan = PowerMonitor.peripheralScanEvery
@@ -101,6 +103,7 @@ final class PowerMonitor {
             recordHealth(s)
             trackDropouts(from: snapshot, to: s)
             updateQuality(s)
+            publishToWidget(s, verdict: a)
             logTransitions(from: snapshot, to: s, verdict: a)
             snapshot = s
             assessment = a
@@ -109,6 +112,22 @@ final class PowerMonitor {
             lastFingerprint = s.adapter?.fingerprint
         }
         onUpdate?()
+    }
+
+    /// Writes the widget's reading into its container and asks WidgetKit to redraw, only when
+    /// something a glance would notice changed, since widget reloads are rationed.
+    private func publishToWidget(_ s: PowerSnapshot, verdict a: ChargerAssessment) {
+        let w = WidgetSnapshot(s, verdict: a.verdict.isSettled ? a.headline : nil)
+        guard w.differsMeaningfully(from: lastWidget), let data = w.encoded() else { return }
+        lastWidget = w
+        let url = WidgetSnapshot.containerURL()
+        do {
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try data.write(to: url, options: .atomic)
+            WidgetCenter.shared.reloadTimelines(ofKind: "WattsupWidget")
+        } catch {
+            log.error("Could not write the widget reading: \(error.localizedDescription)")
+        }
     }
 
     private func recordHealth(_ s: PowerSnapshot) {
