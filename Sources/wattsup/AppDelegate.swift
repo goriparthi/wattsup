@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var dashboard: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        Diagnostics.launched(version: Updates.bundleVersion)
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.target = self
         statusItem.button?.action = #selector(togglePopover)
@@ -47,6 +48,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         monitor.flush()
+        Diagnostics.quitCleanly()
     }
 
     private func observeSettings() {

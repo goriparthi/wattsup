@@ -8,6 +8,7 @@ struct BatteryTank: View {
     var width: CGFloat = 56
     var height: CGFloat = 92
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var clock = AnimationClock()
 
     private var level: Double { Double(snapshot.percent) / 100 }
     private var watts: Double { snapshot.batteryWatts }
@@ -23,9 +24,10 @@ struct BatteryTank: View {
             RoundedRectangle(cornerRadius: 2, style: .continuous)
                 .fill(Color.primary.opacity(0.35))
                 .frame(width: width * 0.36, height: height * 0.06)
-            TimelineView(.animation(minimumInterval: 1 / 30, paused: reduceMotion || !flowing)) { context in
+            TimelineView(.animation(minimumInterval: 1 / 60, paused: reduceMotion || !flowing)) { context in
                 Canvas { ctx, size in
-                    draw(in: &ctx, size: size, time: context.date.timeIntervalSinceReferenceDate)
+                    clock.tick(context.date.timeIntervalSinceReferenceDate)
+                    draw(in: &ctx, size: size)
                 }
             }
             .frame(width: width, height: height)
@@ -37,11 +39,14 @@ struct BatteryTank: View {
         .accessibilityLabel("Battery \(snapshot.percent) percent, \(snapshot.state.title)")
     }
 
-    private func draw(in ctx: inout GraphicsContext, size: CGSize, time: TimeInterval) {
+    private func draw(in ctx: inout GraphicsContext, size: CGSize) {
         ctx.fill(Path(CGRect(origin: .zero, size: size)), with: .color(Color.primary.opacity(0.06)))
 
         // Speed follows the measured watts, so a fast charge visibly churns more
         let speed = min(3, 0.6 + abs(watts) / 20)
+        // Accumulated, so the motion speeds up or slows down instead of jumping when watts change
+        let wavePhase = clock.value("wave", speed: speed * 2)
+        let bubblePhase = clock.value("bubbles", speed: speed * 0.35)
         let amplitude = flowing ? max(1.5, size.height * 0.03) : 1
         let surface = size.height * (1 - level)
 
@@ -50,7 +55,7 @@ struct BatteryTank: View {
             var p = Path()
             p.move(to: CGPoint(x: 0, y: size.height))
             for x in stride(from: 0, through: size.width, by: 2) {
-                let wave = sin((x / size.width) * .pi * 2 + time * speed * 2 + phase)
+                let wave = sin((x / size.width) * .pi * 2 + wavePhase + phase)
                 p.addLine(to: CGPoint(x: x, y: surface + wave * amplitude * scale))
             }
             p.addLine(to: CGPoint(x: size.width, y: size.height))
@@ -67,7 +72,7 @@ struct BatteryTank: View {
         for i in 0..<6 {
             let seed = Double(i) * 0.618
             let x = size.width * (0.15 + 0.7 * (seed.truncatingRemainder(dividingBy: 1)))
-            let progress = (time * speed * 0.35 + seed).truncatingRemainder(dividingBy: 1)
+            let progress = (bubblePhase + seed).truncatingRemainder(dividingBy: 1)
             let r = 1.5 + Double(i % 3)
             // Charging: bubbles rise to the surface. Draining: drops fall from it.
             let y = watts > 0

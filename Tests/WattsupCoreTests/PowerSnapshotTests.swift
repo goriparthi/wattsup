@@ -87,7 +87,7 @@ final class PowerSnapshotTests: XCTestCase {
 
     func testMenuBarLine() {
         let s = Fixture.snapshot(Fixture.charging())
-        XCTAssertEqual(MenuBarMetric.line(MenuBarMetric.defaults, for: s), "44.2W 15.9W 96% 89%")
+        XCTAssertEqual(MenuBarMetric.line(MenuBarMetric.defaults, for: s), "44.2W 96% 15.9W 89%")
         XCTAssertEqual(MenuBarMetric.line([.watts, .volts, .amps], for: s), "43.0W 19.63V 2.19A")
         let battery = Fixture.snapshot(Fixture.discharging())
         XCTAssertEqual(MenuBarMetric.line(MenuBarMetric.defaults, for: battery), "18.6W 89%")

@@ -7,6 +7,7 @@ struct PowerFlowView: View {
     let snapshot: PowerSnapshot
     var large = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var clock = AnimationClock()
 
     private struct Link {
         var from: CGPoint, to: CGPoint
@@ -21,10 +22,10 @@ struct PowerFlowView: View {
             let layout = Layout(size: geo.size, large: large, accessories: !s.peripherals.isEmpty)
             let links = links(layout)
             ZStack {
-                TimelineView(.animation(minimumInterval: 1 / 40, paused: reduceMotion)) { context in
+                TimelineView(.animation(minimumInterval: 1 / 60, paused: reduceMotion)) { context in
                     Canvas { ctx, _ in
-                        let t = context.date.timeIntervalSinceReferenceDate
-                        for link in links { drawPipe(link, in: &ctx, time: t) }
+                        clock.tick(context.date.timeIntervalSinceReferenceDate)
+                        for (i, link) in links.enumerated() { drawPipe(link, key: "pipe\(i)", in: &ctx) }
                     }
                 }
                 ForEach(Array(links.enumerated()), id: \.offset) { _, link in
@@ -88,7 +89,7 @@ struct PowerFlowView: View {
         return out
     }
 
-    private func drawPipe(_ link: Link, in ctx: inout GraphicsContext, time: TimeInterval) {
+    private func drawPipe(_ link: Link, key: String, in ctx: inout GraphicsContext) {
         var path = Path()
         path.move(to: link.from)
         path.addLine(to: link.to)
@@ -108,25 +109,37 @@ struct PowerFlowView: View {
                       angle: atan2(dy, dx), tint: link.tint, in: &ctx)
             return
         }
-        // More watts, more and faster particles; speed is in pipe lengths per second
-        let count = 3 + Int(min(9, link.watts / 7))
+        // A fixed particle count keeps motion steady; the watts set speed, size and glow instead
+        let count = 7
+        let intensity = min(1, 0.35 + link.watts / 60)
         let speed = (0.25 + min(1.6, link.watts / 45)) * (140 / length)
+        let base = clock.phase(key, speed: speed)
+        let r = width * (0.3 + 0.15 * intensity)
+        let tail = min(0.12, 18 / length)
+
+        func point(_ p: Double) -> CGPoint { CGPoint(x: link.from.x + dx * p, y: link.from.y + dy * p) }
+        func fade(_ p: Double) -> Double { sin(.pi * min(1, max(0, p))) }
+
         ctx.drawLayer { layer in
             layer.addFilter(.blur(radius: large ? 2.5 : 1.8))
             for i in 0..<count {
-                let p = (time * speed + Double(i) / Double(count)).truncatingRemainder(dividingBy: 1)
-                let pt = CGPoint(x: link.from.x + dx * p, y: link.from.y + dy * p)
-                let r = width * 0.42
+                let p = (base + Double(i) / Double(count)).truncatingRemainder(dividingBy: 1)
+                // Comet tail: a short streak behind each particle, fading toward its end
+                var streak = Path()
+                streak.move(to: point(max(0, p - tail)))
+                streak.addLine(to: point(p))
+                layer.stroke(streak, with: .color(link.tint.opacity(0.6 * fade(p) * intensity)),
+                             style: StrokeStyle(lineWidth: r * 1.4, lineCap: .round))
+                let pt = point(p)
                 layer.fill(Path(ellipseIn: CGRect(x: pt.x - r, y: pt.y - r, width: r * 2, height: r * 2)),
-                           with: .color(link.tint))
+                           with: .color(link.tint.opacity(fade(p))))
             }
         }
         for i in 0..<count {
-            let p = (time * speed + Double(i) / Double(count)).truncatingRemainder(dividingBy: 1)
-            let pt = CGPoint(x: link.from.x + dx * p, y: link.from.y + dy * p)
-            let r = width * 0.16
-            ctx.fill(Path(ellipseIn: CGRect(x: pt.x - r, y: pt.y - r, width: r * 2, height: r * 2)),
-                     with: .color(.white.opacity(0.9)))
+            let p = (base + Double(i) / Double(count)).truncatingRemainder(dividingBy: 1)
+            let pt = point(p), core = r * 0.42
+            ctx.fill(Path(ellipseIn: CGRect(x: pt.x - core, y: pt.y - core, width: core * 2, height: core * 2)),
+                     with: .color(.white.opacity(0.9 * fade(p))))
         }
     }
 
@@ -148,7 +161,7 @@ struct PowerFlowView: View {
         let accessories: CGPoint?
 
         static func height(large: Bool, accessories: Bool) -> CGFloat {
-            (large ? 190 : 128) + (accessories ? (large ? 150 : 110) : 0)
+            (large ? 190 : 128) + (accessories ? (large ? 160 : 118) : 0)
         }
 
         init(size: CGSize, large: Bool, accessories: Bool) {
@@ -160,7 +173,8 @@ struct PowerFlowView: View {
             charger = CGPoint(x: inset, y: y)
             mac = CGPoint(x: size.width / 2, y: y)
             battery = CGPoint(x: size.width - inset, y: y)
-            self.accessories = accessories ? CGPoint(x: size.width / 2, y: size.height - (large ? 70 : 46)) : nil
+            // Room below the accessory node for its circle and two or three label lines
+            self.accessories = accessories ? CGPoint(x: size.width / 2, y: size.height - (large ? 100 : 66)) : nil
         }
 
         func edge(_ a: CGPoint, toward b: CGPoint) -> CGPoint {
@@ -186,19 +200,26 @@ private struct FlowNodeBadge: View {
         let r = layout.radius
         VStack(spacing: layout.large ? 5 : 3) {
             ZStack {
-                Circle()
-                    .fill(RadialGradient(colors: [tint.opacity(active ? 0.45 : 0.12), tint.opacity(active ? 0.12 : 0.04)],
-                                         center: .center, startRadius: 0, endRadius: r))
-                Circle().strokeBorder(tint.opacity(active ? 0.8 : 0.25), lineWidth: 1.5)
+                // The ring, when present, takes the outer band so every node keeps the same footprint
+                let ringWidth: CGFloat = layout.large ? 4 : 3
+                let inset: CGFloat = ring == nil ? 0 : ringWidth + 3
+                Group {
+                    Circle()
+                        .fill(RadialGradient(colors: [tint.opacity(active ? 0.45 : 0.12), tint.opacity(active ? 0.12 : 0.04)],
+                                             center: .center, startRadius: 0, endRadius: r))
+                    Circle().strokeBorder(tint.opacity(active ? 0.8 : 0.25), lineWidth: 1.5)
+                }
+                .padding(inset)
                 if let ring {
+                    Circle().stroke(tint.opacity(0.2), lineWidth: ringWidth).padding(ringWidth / 2)
                     Circle()
                         .trim(from: 0, to: ring)
-                        .stroke(tint, style: StrokeStyle(lineWidth: layout.large ? 4 : 3, lineCap: .round))
+                        .stroke(tint, style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
                         .rotationEffect(.degrees(-90))
-                        .padding(-(layout.large ? 5 : 4))
+                        .padding(ringWidth / 2)
                 }
                 Image(systemName: symbol)
-                    .font(.system(size: r * 0.72, weight: .semibold))
+                    .font(.system(size: r * (ring == nil ? 0.72 : 0.6), weight: .semibold))
                     .foregroundStyle(active ? tint : .secondary)
             }
             .frame(width: r * 2, height: r * 2)
@@ -206,11 +227,13 @@ private struct FlowNodeBadge: View {
             Text(value)
                 .font(.system(layout.large ? .title3 : .callout, design: .rounded).weight(.semibold))
                 .monospacedDigit()
+                .contentTransition(.numericText())
+                .animation(.smooth(duration: 0.6), value: value)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-            Text(title).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            Text(title).font(.caption).foregroundStyle(Theme.secondaryText).lineLimit(1)
             if layout.large, let detail {
-                Text(detail).font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
+                Text(detail).font(.caption2.monospacedDigit()).foregroundStyle(Theme.secondaryText)
             }
         }
         .frame(width: layout.large ? 150 : 104)
@@ -226,6 +249,8 @@ private struct WattBadge: View {
     var body: some View {
         Text(text)
             .font(.system(large ? .caption : .caption2, design: .monospaced).weight(.semibold))
+            .contentTransition(.numericText())
+            .animation(.smooth(duration: 0.6), value: text)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
             .background(Capsule().fill(.background.opacity(0.85)))

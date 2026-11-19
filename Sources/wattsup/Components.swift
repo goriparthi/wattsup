@@ -10,7 +10,11 @@ enum Theme {
     static let draining = Color(Brand.draining)
     static let warning = Color(Brand.warning)
     static let accent = Color(Brand.iris)
-    static let surface = Color.primary.opacity(0.045)
+    static let surface = Color(Brand.elevated)
+    static let canvas = Color(Brand.canvas)
+    /// Brand secondary text: higher contrast than the system gray, AA on both surfaces
+    static let secondaryText = Color(Brand.textSecondary)
+    static let hairline = Color.primary.opacity(0.1)
 
     static func battery(_ watts: Double) -> Color { watts < -0.05 ? draining : charging }
 
@@ -43,8 +47,10 @@ struct Card<Content: View>: View {
             content
         }
         .padding(14)
-        .frame(maxWidth: .infinity, alignment: .topLeading)
+        // Fills the row height too, so cards side by side end on the same line
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.surface))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 1))
     }
 }
 
@@ -55,7 +61,7 @@ struct StatRow: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(label).foregroundStyle(.secondary)
+            Text(label).foregroundStyle(Theme.secondaryText)
             Spacer(minLength: 12)
             Text(value)
                 .monospacedDigit()
@@ -90,13 +96,13 @@ struct VerdictBanner: View {
             }
             Text(assessment.detail)
                 .font(.callout)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
             if showsAdvisories {
                 ForEach(assessment.advisories, id: \.self) { note in
                     Label(note, systemImage: "info.circle")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -209,7 +215,7 @@ struct ProfileTable: View {
                 Text("Profile"); Text("Voltage"); Text("Current"); Text("Power")
             }
             .font(.caption)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Theme.secondaryText)
             ForEach(adapter.profiles) { p in
                 let active = p.index == adapter.activeProfileIndex
                 GridRow {
@@ -235,7 +241,7 @@ struct CellBars: View {
         VStack(alignment: .leading, spacing: 6) {
             ForEach(Array(cells.enumerated()), id: \.offset) { i, v in
                 HStack(spacing: 8) {
-                    Text("Cell \(i + 1)").font(.caption).foregroundStyle(.secondary).frame(width: 44, alignment: .leading)
+                    Text("Cell \(i + 1)").font(.caption).foregroundStyle(Theme.secondaryText).frame(width: 44, alignment: .leading)
                     LoadBarTinted(fraction: (v - 3.0) / 1.4, tint: Theme.charging)
                     Text(Units.volts(v, digits: 3)).font(.caption.monospacedDigit()).frame(width: 58, alignment: .trailing)
                 }
@@ -270,7 +276,7 @@ struct EnergyModePicker: View {
             let binding = Binding(get: { current }, set: { energy.set($0, for: source) })
             if compact {
                 HStack {
-                    Text("Energy mode").foregroundStyle(.secondary)
+                    Text("Energy mode").foregroundStyle(Theme.secondaryText)
                     Spacer()
                     Picker("Energy mode", selection: binding) {
                         ForEach(modes.available) { Text($0.title).tag($0) }
@@ -282,7 +288,7 @@ struct EnergyModePicker: View {
                 .font(.callout)
             } else {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(source.title).font(.caption).foregroundStyle(.secondary)
+                    Text(source.title).font(.caption).foregroundStyle(Theme.secondaryText)
                     Picker(source.title, selection: binding) {
                         ForEach(modes.available) { Text($0.title).tag($0) }
                     }

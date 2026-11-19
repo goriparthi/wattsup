@@ -40,7 +40,7 @@ struct PopoverView: View {
                 Text("\(s.percent)%")
                     .font(.system(size: 26, weight: .semibold, design: .rounded))
                     .monospacedDigit()
-                Text(s.statusLine).font(.callout).foregroundStyle(.secondary)
+                Text(s.statusLine).font(.callout).foregroundStyle(Theme.secondaryText)
             }
             Spacer()
         }
@@ -105,6 +105,7 @@ struct SettingsMenu: View {
                 .keyboardShortcut(",")
             Button("Check for Updates…", action: actions.checkForUpdates)
             Button("Battery Settings…", action: SystemSettings.openBattery)
+            Button("Reveal Logs in Finder", action: Diagnostics.revealInFinder)
             Divider()
             Button("Quit Wattsup") { NSApp.terminate(nil) }
                 .keyboardShortcut("q")

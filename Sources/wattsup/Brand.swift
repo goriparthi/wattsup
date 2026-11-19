@@ -13,6 +13,8 @@ enum Brand {
     static let warning = dynamic(0x855006, 0xFFCA75)
     static let textPrimary = dynamic(0x171A2C, 0xF3F5FE)
     static let textSecondary = dynamic(0x4D5770, 0xB2BAD4)
+    static let canvas = dynamic(0xF4F6FB, 0x111427)
+    static let elevated = dynamic(0xFFFFFF, 0x1C2138)
 
     static func color(_ tone: MetricTone) -> NSColor {
         switch tone {

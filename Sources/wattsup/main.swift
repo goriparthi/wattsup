@@ -12,6 +12,8 @@ case "--snapshot":
 case "--render-menubar":
     let dir = CommandLine.arguments.dropFirst(2).first ?? "dist/menubar"
     exit(MainActor.assumeIsolated { MenuBarRender.run(directory: dir) })
+case "--diagnostics":
+    Diagnostics.printReport()
 case "--help", "-h":
     print("""
     wattsup \(version)
@@ -19,6 +21,7 @@ case "--help", "-h":
       --dashboard     run and open the dashboard
       --settings      run and open settings
       --snapshot      print one reading and exit
+      --diagnostics   print the log folder, recent log lines and saved crash reports
       --version       print the version
     """)
 case .some(let arg) where !["--dashboard", "--popover", "--settings"].contains(arg):

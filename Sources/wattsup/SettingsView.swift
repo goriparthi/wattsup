@@ -22,13 +22,10 @@ struct SettingsView: View {
                 }
             }
             Section {
-                ForEach(Array(settings.metrics.enumerated()), id: \.element) { index, metric in
-                    MetricRow(metric: metric, snapshot: monitor.snapshot, on: true,
-                              canMoveUp: index > 0, canMoveDown: index < settings.metrics.count - 1,
+                ForEach(Array(settings.order.enumerated()), id: \.element) { index, metric in
+                    MetricRow(metric: metric, snapshot: monitor.snapshot, on: settings.shown.contains(metric),
+                              canMoveUp: index > 0, canMoveDown: index < settings.order.count - 1,
                               move: { settings.shift(metric, by: $0) }) { settings.toggle(metric) }
-                }
-                ForEach(MenuBarMetric.allCases.filter { !settings.metrics.contains($0) }) { metric in
-                    MetricRow(metric: metric, snapshot: monitor.snapshot, on: false) { settings.toggle(metric) }
                 }
             } header: {
                 Text("Readings")
@@ -39,7 +36,7 @@ struct SettingsView: View {
                     Button("Reset") { settings.resetMenuBar() }
                 }
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.secondaryText)
             }
             Section {
                 HStack {
@@ -52,7 +49,7 @@ struct SettingsView: View {
             } footer: {
                 Text("Wattsup can show battery percent and time, so the built in battery icon is optional. Turn off Battery in that list, or Command drag the icon out of the menu bar.")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.secondaryText)
             }
             Section("General") {
                 Toggle("Open at login", isOn: Binding(get: { settings.launchesAtLogin },
@@ -65,7 +62,7 @@ struct SettingsView: View {
                 Toggle("Check for updates automatically", isOn: Binding(get: { settings.checksForUpdates },
                                                                         set: { settings.checksForUpdates = $0 }))
                 HStack {
-                    Text(updates.status).foregroundStyle(.secondary)
+                    Text(updates.status).foregroundStyle(Theme.secondaryText)
                     Spacer()
                     Button("Check Now") { Task { await updates.check(interactive: true) } }
                         .disabled(updates.busy)
@@ -75,7 +72,7 @@ struct SettingsView: View {
             } footer: {
                 Text("A daily look at github.com/goriparthi/wattsup for a newer release. It is the only network request Wattsup makes, and updates install only if Apple notarized them.")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.secondaryText)
             }
         }
         .formStyle(.grouped)
@@ -90,7 +87,7 @@ struct SettingsView: View {
             if let s = monitor.snapshot {
                 MenuBarPreview(snapshot: s, settings: settings)
             } else {
-                Text("No reading yet").foregroundStyle(.secondary)
+                Text("No reading yet").foregroundStyle(Theme.secondaryText)
             }
         }
         .padding(.horizontal, 10)
@@ -115,7 +112,7 @@ struct MetricRow: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(metric.title)
                     if !metric.help.isEmpty {
-                        Text(metric.help).font(.caption).foregroundStyle(.secondary)
+                        Text(metric.help).font(.caption).foregroundStyle(Theme.secondaryText)
                     }
                 }
             }
@@ -126,18 +123,16 @@ struct MetricRow: View {
                     .font(.callout.monospacedDigit())
                     .foregroundStyle(Color(nsColor: StatusItemRenderer.color(metric.tone(for: s), colored: true)))
             }
-            if on {
-                ControlGroup {
-                    Button { move(-1) } label: { Image(systemName: "chevron.up") }
-                        .disabled(!canMoveUp)
-                        .accessibilityLabel("Move \(metric.title) earlier")
-                    Button { move(1) } label: { Image(systemName: "chevron.down") }
-                        .disabled(!canMoveDown)
-                        .accessibilityLabel("Move \(metric.title) later")
-                }
-                .controlSize(.small)
-                .fixedSize()
+            ControlGroup {
+                Button { move(-1) } label: { Image(systemName: "chevron.up") }
+                    .disabled(!canMoveUp)
+                    .accessibilityLabel("Move \(metric.title) earlier")
+                Button { move(1) } label: { Image(systemName: "chevron.down") }
+                    .disabled(!canMoveDown)
+                    .accessibilityLabel("Move \(metric.title) later")
             }
+            .controlSize(.small)
+            .fixedSize()
         }
     }
 }
@@ -155,7 +150,7 @@ struct MenuBarPreview: NSViewRepresentable {
 
     func updateNSView(_ button: NSButton, context: Context) {
         // Touch every setting so SwiftUI redraws the preview when any of them changes
-        _ = (settings.metrics, settings.layout, settings.usesColors, settings.icon, settings.outlined)
+        _ = (settings.order, settings.shown, settings.layout, settings.usesColors, settings.icon, settings.outlined)
         if let button = button as? NSStatusBarButton {
             StatusItemRenderer.apply(to: button, snapshot: snapshot, settings: settings)
         }

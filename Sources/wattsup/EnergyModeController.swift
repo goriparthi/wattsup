@@ -49,13 +49,14 @@ final class EnergyModeController {
         let script = "do shell script \"\(command)\" with administrator privileges"
         busy = true
         error = nil
+        log.info("Energy Mode change requested: \(source.title) to \(mode.title)")
         Task {
             let result = await Self.run("/usr/bin/osascript", ["-e", script])
             busy = false
             if result.status != 0 && !result.output.contains("-128") {
                 // -128 is the user cancelling the prompt, which is not an error
                 error = "Could not change Energy Mode."
-                log.error("Energy Mode change failed: \(result.output, privacy: .public)")
+                log.error("Energy Mode change failed: \(result.output)")
             }
             refresh()
         }

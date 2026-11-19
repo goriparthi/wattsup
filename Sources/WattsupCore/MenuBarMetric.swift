@@ -11,8 +11,17 @@ public enum MenuBarMetric: String, CaseIterable, Codable, Identifiable, Sendable
     case watts, volts, amps, systemWatts, batteryWatts, wallWatts, adapterLoss, chargerLoad
     case percent, time, temperature, health, energyMode, peripherals
 
-    /// Wall draw, Mac use, charger load and percent; the two charger readings drop out on battery.
-    public static let defaults: [MenuBarMetric] = [.wallWatts, .systemWatts, .chargerLoad, .percent]
+    /// Shown out of the box: wall draw, charger load, Mac use and percent. The two charger
+    /// readings drop out on battery, leaving Mac use and percent.
+    public static let defaults: [MenuBarMetric] = [.wallWatts, .chargerLoad, .systemWatts, .percent]
+
+    /// Every reading in its default position: the shown ones first, the rest after.
+    public static let defaultOrder: [MenuBarMetric] = defaults + allCases.filter { !defaults.contains($0) }
+
+    /// A saved order made whole: unknown entries dropped, readings added in later builds appended.
+    public static func completeOrder(_ saved: [MenuBarMetric]) -> [MenuBarMetric] {
+        saved + defaultOrder.filter { !saved.contains($0) }
+    }
     public var id: String { rawValue }
 
     public var title: String {

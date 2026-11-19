@@ -18,6 +18,14 @@ final class MenuBarAndVersionTests: XCTestCase {
         XCTAssertEqual(MenuBarMetric.rows([.watts]), [[.watts]])
     }
 
+    func testCompleteOrderKeepsSavedAndAppendsNew() {
+        let order = MenuBarMetric.completeOrder([.amps, .watts])
+        XCTAssertEqual(Array(order.prefix(2)), [.amps, .watts])
+        XCTAssertEqual(Set(order), Set(MenuBarMetric.allCases))
+        XCTAssertEqual(order.count, MenuBarMetric.allCases.count)
+        XCTAssertEqual(Array(MenuBarMetric.defaultOrder.prefix(4)), MenuBarMetric.defaults)
+    }
+
     func testDecodeKeepsOrderAndDropsRepeats() {
         XCTAssertEqual(MenuBarMetric.decode("amps,watts,amps,nope"), [.amps, .watts])
     }

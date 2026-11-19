@@ -25,14 +25,26 @@ enum MenuBarLayout: String, CaseIterable, Identifiable {
 @MainActor @Observable
 final class AppSettings {
     private enum Key {
-        static let metrics = "menuBarMetrics", icon = "menuBarIcon", colors = "menuBarColors"
+        static let metrics = "menuBarMetrics", order = "menuBarOrder", icon = "menuBarIcon", colors = "menuBarColors"
         static let layout = "menuBarLayout", autoUpdate = "checksForUpdates", outlined = "menuBarOutlined"
     }
     private let defaults = UserDefaults.standard
 
-    /// In the user's order; the menu bar shows them left to right, or top row first.
-    var metrics: [MenuBarMetric] {
+    /// Every reading in the user's order; the checkbox state lives in `shown`.
+    var order: [MenuBarMetric] {
+        didSet { defaults.set(MenuBarMetric.encode(order), forKey: Key.order) }
+    }
+    var shown: Set<MenuBarMetric> {
         didSet { defaults.set(MenuBarMetric.encode(metrics), forKey: Key.metrics) }
+    }
+
+    /// The shown readings, left to right in the menu bar or top row first when stacked.
+    var metrics: [MenuBarMetric] {
+        get { order.filter(shown.contains) }
+        set {
+            shown = Set(newValue)
+            order = MenuBarMetric.completeOrder(newValue + order.filter { !newValue.contains($0) })
+        }
     }
     var icon: MenuBarIcon { didSet { defaults.set(icon.rawValue, forKey: Key.icon) } }
     var usesColors: Bool { didSet { defaults.set(usesColors, forKey: Key.colors) } }
@@ -44,7 +56,10 @@ final class AppSettings {
     private(set) var loginItemError: String?
 
     init() {
-        metrics = defaults.string(forKey: Key.metrics).map(MenuBarMetric.decode) ?? MenuBarMetric.defaults
+        let saved = defaults.string(forKey: Key.metrics).map(MenuBarMetric.decode) ?? MenuBarMetric.defaults
+        shown = Set(saved)
+        // Builds before full ordering only saved the shown list; those lead, the rest follow
+        order = MenuBarMetric.completeOrder(defaults.string(forKey: Key.order).map(MenuBarMetric.decode) ?? saved)
         icon = defaults.string(forKey: Key.icon).flatMap(MenuBarIcon.init) ?? .power
         usesColors = defaults.object(forKey: Key.colors) as? Bool ?? true
         outlined = defaults.object(forKey: Key.outlined) as? Bool ?? true
@@ -52,25 +67,20 @@ final class AppSettings {
         checksForUpdates = defaults.object(forKey: Key.autoUpdate) as? Bool ?? true
     }
 
-    /// New readings join at the end, so turning one on never reshuffles the rest.
+    /// Showing or hiding a reading never moves it; its place in the order is kept.
     func toggle(_ metric: MenuBarMetric) {
-        if let i = metrics.firstIndex(of: metric) { metrics.remove(at: i) } else { metrics.append(metric) }
+        if shown.contains(metric) { shown.remove(metric) } else { shown.insert(metric) }
     }
 
-    func move(from source: IndexSet, to destination: Int) {
-        metrics.move(fromOffsets: source, toOffset: destination)
-    }
-
-    /// Moves a shown reading one place left (up) or right (down) in the menu bar.
+    /// Moves a reading one place earlier or later in the full order.
     func shift(_ metric: MenuBarMetric, by offset: Int) {
-        guard let i = metrics.firstIndex(of: metric) else { return }
-        let j = i + offset
-        guard metrics.indices.contains(j) else { return }
-        metrics.swapAt(i, j)
+        guard let i = order.firstIndex(of: metric), order.indices.contains(i + offset) else { return }
+        order.swapAt(i, i + offset)
     }
 
     func resetMenuBar() {
-        metrics = MenuBarMetric.defaults
+        order = MenuBarMetric.defaultOrder
+        shown = Set(MenuBarMetric.defaults)
         layout = .line
         usesColors = true
         icon = .power
@@ -83,7 +93,7 @@ final class AppSettings {
             loginItemError = nil
         } catch {
             loginItemError = error.localizedDescription
-            log.error("Login item change failed: \(error.localizedDescription, privacy: .public)")
+            log.error("Login item change failed: \(error.localizedDescription)")
         }
         launchesAtLogin = SMAppService.mainApp.status == .enabled
     }

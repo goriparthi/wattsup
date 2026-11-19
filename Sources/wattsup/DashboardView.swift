@@ -13,32 +13,38 @@ struct DashboardView: View {
             if let s = monitor.snapshot {
                 VStack(alignment: .leading, spacing: 16) {
                     hero(s)
+                    // The side column stacks the short cards so it fills the flow's height
                     HStack(alignment: .top, spacing: 16) {
                         Card(title: "Power flow", symbol: "arrow.left.arrow.right") {
+                            Spacer(minLength: 0)
                             PowerFlowView(snapshot: s, large: true)
+                            Spacer(minLength: 0)
                         }
-                        Card(title: "Charger check", symbol: "checkmark.shield") {
-                            if let a = monitor.assessment { VerdictBanner(assessment: a) }
+                        VStack(spacing: 16) {
+                            Card(title: "Charger check", symbol: "checkmark.shield") {
+                                if let a = monitor.assessment { VerdictBanner(assessment: a) }
+                            }
+                            Card(title: "Energy mode", symbol: "leaf") {
+                                EnergyModePicker(energy: monitor.energy, source: .battery, compact: false)
+                                EnergyModePicker(energy: monitor.energy, source: .charger, compact: false)
+                                Text("Changing it asks for an administrator password, because macOS only lets an admin change power settings.")
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.secondaryText)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            if !s.peripherals.isEmpty {
+                                AccessoriesCard(peripherals: s.peripherals, compact: true)
+                            }
                         }
                         .frame(width: 360)
                     }
+                    .fixedSize(horizontal: false, vertical: true)
                     charts
                     HStack(alignment: .top, spacing: 16) {
                         ChargerCard(snapshot: s, assessment: monitor.assessment)
                         BatteryCard(snapshot: s)
                     }
-                    if !s.peripherals.isEmpty {
-                        AccessoriesCard(peripherals: s.peripherals)
-                    }
-                    Card(title: "Energy mode", symbol: "leaf") {
-                        HStack(alignment: .top, spacing: 24) {
-                            EnergyModePicker(energy: monitor.energy, source: .battery, compact: false)
-                            EnergyModePicker(energy: monitor.energy, source: .charger, compact: false)
-                        }
-                        Text("Changing it asks for an administrator password, because macOS only lets an admin change power settings.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                    .fixedSize(horizontal: false, vertical: true)
                     ChargerHistoryCard(chargers: monitor.chargers.sorted,
                                        current: s.adapter?.fingerprint,
                                        forget: monitor.forgetCharger)
@@ -49,6 +55,7 @@ struct DashboardView: View {
             }
         }
         .frame(minWidth: 900, minHeight: 640)
+        .background(Theme.canvas)
         .tint(Theme.accent)
     }
 
@@ -59,7 +66,7 @@ struct DashboardView: View {
                 Text("\(s.percent)%")
                     .font(.system(size: 40, weight: .semibold, design: .rounded))
                     .monospacedDigit()
-                Text(s.statusLine).font(.title3).foregroundStyle(.secondary)
+                Text(s.statusLine).font(.title3).foregroundStyle(Theme.secondaryText)
             }
             Spacer()
             HeroStat(title: "Charger in", value: s.isExternalPower ? Units.watts(s.inputWatts) : "Unplugged",
@@ -116,7 +123,7 @@ struct DashboardView: View {
             }
             Text("Volts and amps follow the charger input while plugged in and the battery pack on battery. History is kept while Wattsup runs.")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.secondaryText)
         }
     }
 }
@@ -142,12 +149,12 @@ struct HeroStat: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(title).font(.caption).foregroundStyle(.secondary)
+            Text(title).font(.caption).foregroundStyle(Theme.secondaryText)
             Text(value)
                 .font(.system(.title2, design: .rounded).weight(.semibold))
                 .monospacedDigit()
                 .foregroundStyle(tint == .secondary ? .primary : tint)
-            Text(detail).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+            Text(detail).font(.caption.monospacedDigit()).foregroundStyle(Theme.secondaryText)
         }
         .padding(12)
         .frame(minWidth: 120, alignment: .leading)
@@ -184,12 +191,12 @@ struct ChargerCard: View {
                 if a.isWireless { StatRow(label: "Type", value: "Wireless") }
                 if !a.profiles.isEmpty {
                     Divider()
-                    Text("Power profiles this charger offers").font(.caption).foregroundStyle(.secondary)
+                    Text("Power profiles this charger offers").font(.caption).foregroundStyle(Theme.secondaryText)
                     ProfileTable(adapter: a)
                 }
             } else {
                 Text("No charger connected. Plug one in to see what it offers and how hard it's working.")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.secondaryText)
             }
         }
     }
@@ -227,7 +234,7 @@ struct BatteryCard: View {
             if !s.cellVolts.isEmpty {
                 Divider()
                 HStack {
-                    Text("Cells").font(.caption).foregroundStyle(.secondary)
+                    Text("Cells").font(.caption).foregroundStyle(Theme.secondaryText)
                     Spacer()
                     if let spread = s.cellSpreadMillivolts {
                         Text("Imbalance \(spread) mV")
@@ -250,14 +257,14 @@ struct ChargerHistoryCard: View {
         Card(title: "Chargers you've used", symbol: "suitcase.rolling") {
             if chargers.isEmpty {
                 Text("Every charger you plug in is remembered here with its peak load, so you can tell which bricks keep up.")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.secondaryText)
             } else {
                 Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 8) {
                     GridRow {
                         Text("Charger"); Text("Limit"); Text("Peak load"); Text("Efficiency"); Text("Mac wanted"); Text("Used"); Text("Last seen"); Text("Verdict"); Text("")
                     }
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.secondaryText)
                     ForEach(chargers) { r in
                         GridRow {
                             HStack(spacing: 6) {
@@ -272,12 +279,12 @@ struct ChargerHistoryCard: View {
                                 let grade = ChargerEfficiency.Grade.of(e)
                                 Text("\(Units.percent(e)) \(grade.title)").foregroundStyle(Color(Brand.color(grade.tone)))
                             } else {
-                                Text("Not rated").foregroundStyle(.secondary)
+                                Text("Not rated").foregroundStyle(Theme.secondaryText)
                             }
                             Text(Units.watts(r.peakDemandWatts, digits: 0))
                             Text(Units.duration(minutes: Int(r.secondsConnected / 60)))
                             Text(r.lastSeen, format: .relative(presentation: .named))
-                            Text(r.lastVerdict ?? "Not judged yet").foregroundStyle(.secondary)
+                            Text(r.lastVerdict ?? "Not judged yet").foregroundStyle(Theme.secondaryText)
                             Button {
                                 forget(r.fingerprint)
                             } label: {
@@ -297,6 +304,7 @@ struct ChargerHistoryCard: View {
 
 struct AccessoriesCard: View {
     let peripherals: [Peripheral]
+    var compact = false
 
     var body: some View {
         Card(title: "Powering accessories", symbol: "cable.connector") {
@@ -307,16 +315,19 @@ struct AccessoriesCard: View {
                     Text("up to \(Units.watts(p.allocatedWatts))")
                         .monospacedDigit()
                         .foregroundStyle(Theme.system)
-                    Text("\(p.allocatedMilliamps) mA at 5 V")
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                        .frame(width: 110, alignment: .trailing)
+                    if !compact {
+                        Text("\(p.allocatedMilliamps) mA at 5 V")
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(Theme.secondaryText)
+                            .frame(width: 110, alignment: .trailing)
+                    }
                 }
                 .font(.callout)
             }
             Text("macOS reports the power it set aside for each device, not a live reading, so these are ceilings. Whatever they draw is already part of Mac uses.")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
@@ -353,13 +364,13 @@ struct EfficiencyRating: View {
                 StatRow(label: "Lost as heat", value: Units.watts(e.lossWatts), tint: Theme.warning)
                 Text("Excellent is 94% or more, typical of good GaN chargers; good is 90%, fair 85%. The loss is macOS's own estimate.")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.secondaryText)
             } else {
                 Text(snapshot.isExternalPower
                      ? "Not rated below \(Int(ChargerEfficiency.minimumRatedWatts)) W, where every charger is least efficient."
                      : "Plug in a charger to rate it.")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.secondaryText)
             }
         }
     }

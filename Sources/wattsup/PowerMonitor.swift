@@ -69,6 +69,7 @@ final class PowerMonitor {
             let a = ChargerAssessment(snapshot: s, history: history)
             let settled = a.verdict != .measuring && a.verdict != .unplugged
             chargers.record(s, verdict: settled ? a.headline : nil)
+            logTransitions(from: snapshot, to: s, verdict: a)
             snapshot = s
             assessment = a
             availability = .ready
@@ -76,6 +77,26 @@ final class PowerMonitor {
             lastFingerprint = s.adapter?.fingerprint
         }
         onUpdate?()
+    }
+
+    /// Logs only what changed, so the file reads as a timeline of plug events and verdicts.
+    private func logTransitions(from old: PowerSnapshot?, to s: PowerSnapshot, verdict: ChargerAssessment) {
+        if old?.isExternalPower != s.isExternalPower {
+            log.info(s.isExternalPower ? "Charger connected" : "Charger disconnected, on battery at \(s.percent)%")
+        }
+        if let a = s.adapter, old?.adapter?.fingerprint != a.fingerprint {
+            let profile = a.activeProfile.map { Units.profile($0) } ?? "no active profile"
+            log.info("Charger: \(a.title), negotiated \(Units.volts(a.negotiatedVolts, digits: 1)) at \(Units.amps(a.negotiatedAmps)), active \(profile), \(a.profiles.count) profiles")
+            if ChargerAssessment.looksCableCapped(a) { log.info("Charger menu stops at 20 V 3 A; cable likely limits it to 60 W") }
+        }
+        if old?.state != s.state { log.info("State: \(s.state.title) at \(s.percent)%") }
+        if verdict.verdict != assessment?.verdict, verdict.verdict != .measuring {
+            log.info("Charger check: \(verdict.headline). \(verdict.detail)")
+        }
+        if old?.peripherals.map(\.name) != s.peripherals.map(\.name) {
+            log.info(s.peripherals.isEmpty ? "No powered accessories"
+                     : "Powering: " + s.peripherals.map { "\($0.name) up to \(Units.watts($0.allocatedWatts))" }.joined(separator: ", "))
+        }
     }
 
     func forgetCharger(_ fingerprint: String) {
@@ -126,7 +147,7 @@ struct ChargerStore {
             let backup = url.appendingPathExtension("corrupt")
             try? FileManager.default.removeItem(at: backup)
             try? FileManager.default.moveItem(at: url, to: backup)
-            log.error("Charger log unreadable, moved aside: \(error.localizedDescription, privacy: .public)")
+            log.error("Charger log unreadable, moved aside: \(error.localizedDescription)")
             return ChargerLog()
         }
     }
@@ -137,7 +158,7 @@ struct ChargerStore {
                                                     withIntermediateDirectories: true)
             try encoder.encode(chargers).write(to: url, options: .atomic)
         } catch {
-            log.error("Could not save charger log: \(error.localizedDescription, privacy: .public)")
+            log.error("Could not save charger log: \(error.localizedDescription)")
         }
     }
 

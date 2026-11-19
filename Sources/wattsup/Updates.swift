@@ -85,7 +85,7 @@ enum Updates {
         let fm = FileManager.default
         func fail(_ message: String) -> StageResult {
             try? fm.removeItem(at: work)
-            log.error("Update rejected: \(message, privacy: .public)")
+            log.error("Update rejected: \(message)")
             return .failed(message)
         }
 
@@ -211,6 +211,7 @@ final class UpdateController {
         guard !busy else { return }
         busy = true
         status = "Checking…"
+        log.info("Update check (\(interactive ? "asked" : "daily"))")
         let result = await Updates.check(currentVersion: Updates.bundleVersion)
         busy = false
         UserDefaults.standard.set(Date(), forKey: Self.lastCheckKey)
@@ -221,10 +222,11 @@ final class UpdateController {
             if interactive { inform("You're up to date", "Wattsup \(Updates.bundleVersion) is the latest release.") }
         case .failed(let message):
             status = message
-            log.error("\(message, privacy: .public)")
+            log.error("\(message)")
             if interactive { inform("Update check failed", message) }
         case .available(let version, let page, let dmg):
             status = "Update available: \(version)"
+            log.info("Update available: \(version)")
             offer(version: version, page: page, dmg: dmg)
         }
     }
@@ -257,6 +259,7 @@ final class UpdateController {
             inform("Update not installed", message)
         case .ready(let swap):
             status = "Relaunching…"
+            log.info("Update \(version) verified; relaunching into it")
             swap()
             NSApp.terminate(nil)
         }
