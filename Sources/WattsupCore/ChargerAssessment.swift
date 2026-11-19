@@ -168,9 +168,8 @@ public struct ChargerAssessment: Equatable, Sendable {
         if s.slowChargingReason != 0 {
             notes.append("macOS reports slow charging (reason code \(Self.hex(s.slowChargingReason))).")
         }
-        if s.notChargingReason != 0 {
-            notes.append("macOS has paused charging (reason code \(Self.hex(s.notChargingReason))), "
-                + "for example to hold the battery for Optimized Charging.")
+        if s.notChargingReason != 0, let hold = ChargeHold(snapshot: s), hold.title != "Full" {
+            notes.append(hold.title + ". " + hold.detail)
         }
         if let seconds = s.thermallyLimitedSeconds, seconds > 0 {
             notes.append("Charging was slowed by heat for \(Units.duration(minutes: max(1, seconds / 60))).")

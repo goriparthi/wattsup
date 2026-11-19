@@ -286,8 +286,17 @@ struct BatteryCard: View {
                 StatRow(label: "Battery is asking for",
                         value: "\(Units.watts(watts)) (\(Units.volts(s.requestedCellVolts, digits: 2))/cell, \(Units.amps(s.requestedAmps)))")
             }
-            if s.notChargingReason != 0 {
-                StatRow(label: "Charging paused", value: "code 0x\(String(s.notChargingReason, radix: 16, uppercase: true))")
+            if let hold = ChargeHold(snapshot: s) {
+                VStack(alignment: .leading, spacing: 4) {
+                    StatRow(label: "Charging", value: hold.title, tint: hold.title == "Full" ? nil : Theme.warning)
+                    Text(hold.detail + (hold.code.map { " macOS reason code 0x\(String($0, radix: 16, uppercase: true))." } ?? ""))
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if hold.title != "Full" {
+                        Button("Open Battery Settings", action: SystemSettings.openBattery).controlSize(.small)
+                    }
+                }
             }
             if s.slowChargingReason != 0 {
                 StatRow(label: "Slow charging", value: "code 0x\(String(s.slowChargingReason, radix: 16, uppercase: true))")

@@ -85,6 +85,9 @@ struct PopoverView: View {
                 Divider()
             }
             DetailGroup(title: "Battery", symbol: "battery.75percent") {
+                if let hold = ChargeHold(snapshot: s), hold.title != "Full" {
+                    StatRow(label: "Charging", value: hold.title, tint: Theme.warning)
+                }
                 StatRow(label: "Health", value: Units.percent(s.health, digits: 1))
                 StatRow(label: "Temperature", value: Units.celsius(s.temperatureC))
             }
