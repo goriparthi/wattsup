@@ -51,6 +51,25 @@ public enum Units {
         return m == 0 ? "\(h) h" : "\(h) h \(m) min"
     }
 
+    /// A precise local time that still reads naturally: "Today 4:12 PM", "Yesterday 1:54 PM",
+    /// "Tue, Nov 18, 9:03 AM", with the year added once it is not this year. Display only.
+    public static func seen(_ date: Date, now: Date = Date(), calendar: Calendar = .current,
+                            locale: Locale = .current) -> String {
+        let time = DateFormatter()
+        time.calendar = calendar; time.timeZone = calendar.timeZone; time.locale = locale
+        time.dateStyle = .none; time.timeStyle = .short
+        let clock = time.string(from: date)
+        if calendar.isDate(date, inSameDayAs: now) { return "Today \(clock)" }
+        if let y = calendar.date(byAdding: .day, value: -1, to: now), calendar.isDate(date, inSameDayAs: y) {
+            return "Yesterday \(clock)"
+        }
+        let day = DateFormatter()
+        day.calendar = calendar; day.timeZone = calendar.timeZone; day.locale = locale
+        let sameYear = calendar.component(.year, from: date) == calendar.component(.year, from: now)
+        day.setLocalizedDateFormatFromTemplate(sameYear ? "EEEMMMd" : "EEEMMMdyyyy")
+        return "\(day.string(from: date)), \(clock)"
+    }
+
     /// Compact form for the menu bar, e.g. "1:05".
     public static func clock(minutes: Int) -> String {
         String(format: "%d:%02d", minutes / 60, minutes % 60)

@@ -86,7 +86,7 @@ struct DashboardView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     HStack(alignment: .top, spacing: 16) {
                         ChargerCard(snapshot: s, assessment: monitor.assessment, quality: monitor.quality,
-                                    name: monitor.chargers.record(for: s.adapter?.fingerprint)?.nickname)
+                                    name: monitor.chargers.name(for: s.adapter?.fingerprint))
                         BatteryCard(snapshot: s, trend: HealthTrend(points: monitor.healthPoints))
                         if let t = s.thermals { ThermalsCard(thermals: t, batteryC: s.temperatureC) }
                     }
@@ -99,8 +99,10 @@ struct DashboardView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     ChargerHistoryCard(chargers: monitor.chargers.sorted,
                                        current: s.adapter?.fingerprint,
-                                       forget: monitor.forgetCharger,
-                                       rename: monitor.renameCharger)
+                                       forget: monitor.forgetBrick,
+                                       rename: monitor.renameCharger,
+                                       merge: monitor.mergeCharger,
+                                       separate: monitor.separateCharger)
                 }
                 .padding(20)
             } else {
@@ -373,11 +375,14 @@ struct ChargerHistoryCard: View {
     let current: String?
     let forget: (String) -> Void
     var rename: (String, String) -> Void = { _, _ in }
+    var merge: (String, String) -> Void = { _, _ in }
+    var separate: (String) -> Void = { _ in }
     /// Off for images, where buttons and text fields cannot be drawn
     var showsForget = true
     @State private var order: ChargerRanking.Order = .overall
     @State private var editing: String?
     @State private var draft = ""
+    @State private var expanded: Set<String> = []
     @Environment(\.themeStyle) private var style
 
     var body: some View {
@@ -405,11 +410,15 @@ struct ChargerHistoryCard: View {
                     }
                     .font(style.caption)
                     .foregroundStyle(style.secondary)
-                    ForEach(Array(ChargerRanking.ranked(chargers, by: order).enumerated()), id: \.element.id) { index, entry in
-                        row(index + 1, entry)
+                    let bricks = ChargerRanking.rankedBricks(chargers, by: order)
+                    ForEach(Array(bricks.enumerated()), id: \.element.brick.id) { index, item in
+                        row(index + 1, item.entry, brick: item.brick, all: bricks.map(\.brick))
+                        if item.brick.members.count > 1 && expanded.contains(item.brick.id) {
+                            ForEach(item.brick.members) { member in cableRow(member) }
+                        }
                     }
                 }
-                Text("Overall weighs the power it can deliver (40%), efficiency (30%) and its report card (30%); anything not measured yet is left out. The same brick on a different cable negotiates differently, so it gets its own entry.")
+                Text("Overall weighs the power it can deliver (40%), efficiency (30%) and its report card (30%); anything not measured yet is left out. A charger on a different cable negotiates differently and shows up separately: use ⋯, Same charger as, to combine them into one brick ranked on its best cable.")
                     .font(style.caption)
                     .foregroundStyle(style.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -417,11 +426,11 @@ struct ChargerHistoryCard: View {
         }
     }
 
-    @ViewBuilder private func row(_ rank: Int, _ entry: ChargerRanking.Entry) -> some View {
+    @ViewBuilder private func row(_ rank: Int, _ entry: ChargerRanking.Entry, brick: Brick, all: [Brick]) -> some View {
         let r = entry.record
         GridRow {
             Text("\(rank)").foregroundStyle(style.secondary)
-            nameCell(r)
+            nameCell(r, brick: brick)
             if let score = entry.score {
                 Text("\(Int(score.rounded()))")
                     .foregroundStyle(score >= 85 ? Theme.charging : score >= 65 ? Theme.input : Theme.warning)
@@ -444,20 +453,72 @@ struct ChargerHistoryCard: View {
                 Text("Not rated").foregroundStyle(style.secondary)
             }
             Text(Units.duration(minutes: Int(r.secondsConnected / 60)))
-            Text(r.lastSeen, format: .relative(presentation: .named))
+            Text(Units.seen(r.lastSeen))
+                .help("Last seen \(r.lastSeen.formatted(date: .complete, time: .standard)); first seen \(r.firstSeen.formatted(date: .abbreviated, time: .shortened))")
             if showsForget {
-                Button { forget(r.fingerprint) } label: { Image(systemName: "trash") }
-                    .buttonStyle(.borderless)
-                    .help("Forget this charger")
-                    .accessibilityLabel("Forget \(r.displayName)")
+                HStack(spacing: 8) {
+                    brickMenu(brick, all: all)
+                    Button { forget(brick.id) } label: { Image(systemName: "trash") }
+                        .buttonStyle(.borderless)
+                        .help(brick.members.count > 1 ? "Forget this charger and all its cables" : "Forget this charger")
+                        .accessibilityLabel("Forget \(brick.displayName)")
+                }
             }
         }
         .font(style.body.monospacedDigit())
     }
 
-    @ViewBuilder private func nameCell(_ r: ChargerRecord) -> some View {
+    /// Same charger as another entry, or separate this one back out of its brick.
+    private func brickMenu(_ brick: Brick, all: [Brick]) -> some View {
+        Menu {
+            let others = all.filter { $0.id != brick.id }
+            if !others.isEmpty {
+                Menu("Same charger as") {
+                    ForEach(others) { other in
+                        Button(other.displayName) { merge(brick.id, other.id) }
+                    }
+                }
+            }
+            if brick.members.count > 1 {
+                Section("Separate a cable") {
+                    ForEach(brick.members) { m in
+                        Button("\(Units.watts(m.ceilingWatts, digits: 0)) entry, last seen \(Units.seen(m.lastSeen))") {
+                            separate(m.fingerprint)
+                        }
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis.circle")
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Combine with another entry for the same charger")
+        .accessibilityLabel("Charger options for \(brick.displayName)")
+    }
+
+    /// One cable's own numbers under a merged brick.
+    @ViewBuilder private func cableRow(_ m: ChargerRecord) -> some View {
+        GridRow {
+            Text("")
+            Text("↳ \(m.title)").foregroundStyle(style.secondary)
+            Text("")
+            Text(Units.watts(m.ceilingWatts, digits: 0))
+            Text(Units.percent(m.peakLoad)).foregroundStyle(Theme.load(m.peakLoad ?? 0))
+            Text(m.quality.map { $0.title + (m.resistanceOhms.map { String(format: ", %.2f Ω", $0) } ?? "") } ?? "Not graded")
+                .foregroundStyle(m.quality.map { Color(Brand.color($0.tone)) } ?? style.secondary)
+            Text(m.averageEfficiency.map { Units.percent($0) } ?? "Not rated").foregroundStyle(style.secondary)
+            Text(Units.duration(minutes: Int(m.secondsConnected / 60))).foregroundStyle(style.secondary)
+            Text(Units.seen(m.lastSeen)).foregroundStyle(style.secondary)
+            if showsForget { Text("") }
+        }
+        .font(style.caption.monospacedDigit())
+    }
+
+    @ViewBuilder private func nameCell(_ r: ChargerRecord, brick: Brick) -> some View {
         HStack(spacing: 6) {
-            if r.fingerprint == current {
+            if brick.members.contains(where: { $0.fingerprint == current }) {
                 Circle().fill(Theme.input).frame(width: 7, height: 7).accessibilityLabel("Connected")
             }
             if editing == r.fingerprint {
@@ -469,7 +530,16 @@ struct ChargerHistoryCard: View {
             } else {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(r.displayName)
-                    if r.nickname != nil {
+                    if brick.members.count > 1 {
+                        Button {
+                            if expanded.contains(brick.id) { expanded.remove(brick.id) } else { expanded.insert(brick.id) }
+                        } label: {
+                            Text("\(brick.members.count) cables \(expanded.contains(brick.id) ? "▾" : "▸")")
+                        }
+                        .buttonStyle(.borderless)
+                        .font(style.caption)
+                        .foregroundStyle(style.secondary)
+                    } else if r.nickname != nil {
                         Text(r.title).font(style.caption).foregroundStyle(style.secondary)
                     }
                 }

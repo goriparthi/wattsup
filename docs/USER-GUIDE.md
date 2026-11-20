@@ -97,7 +97,10 @@ Quality or Recently used. Overall weighs the power a charger can deliver (40%), 
 efficiency (30%) and its report card (30%); anything not measured yet is left out rather than
 counted as zero. Use the pencil to name a charger; the name shows in the popover and the Charger
 card, and is never written to the log. The same brick on a different cable negotiates differently,
-so it gets its own entry, which also ranks your cables.
+so it gets its own entry, which also ranks your cables. Use the ⋯ menu, Same charger as, to combine
+those entries into one brick ranked on its best cable; Separate undoes it. Apple chargers report a
+serial number, so identical Apple bricks stay apart; third party chargers do not, so identical
+units of one model share an entry. Last seen shows the exact local time.
 
 ## Powering accessories
 

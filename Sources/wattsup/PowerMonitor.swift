@@ -194,6 +194,21 @@ final class PowerMonitor {
         persistChargers(adapterChanged: true)
     }
 
+    func mergeCharger(_ source: String, _ target: String) {
+        chargers.merge(source, into: target)
+        persistChargers(adapterChanged: true)
+    }
+
+    func separateCharger(_ fingerprint: String) {
+        chargers.separate(fingerprint)
+        persistChargers(adapterChanged: true)
+    }
+
+    func forgetBrick(_ brick: String) {
+        chargers.forgetBrick(brick)
+        persistChargers(adapterChanged: true)
+    }
+
     func forgetCharger(_ fingerprint: String) {
         chargers.forget(fingerprint)
         persistChargers(adapterChanged: true)

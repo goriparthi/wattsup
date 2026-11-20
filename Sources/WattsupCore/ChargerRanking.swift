@@ -57,3 +57,44 @@ public enum ChargerRanking {
         }
     }
 }
+
+/// One physical charger: an entry, or several the user marked as the same brick.
+public struct Brick: Equatable, Sendable, Identifiable {
+    public var id: String
+    public var members: [ChargerRecord]
+    /// The members folded together for ranking: the best each one reached.
+    public var combined: ChargerRecord
+
+    public var displayName: String { combined.displayName }
+
+    public static func group(_ records: [ChargerRecord]) -> [Brick] {
+        Dictionary(grouping: records, by: \.brick).map { id, members in
+            let sorted = members.sorted { ($0.ceilingWatts ?? 0) > ($1.ceilingWatts ?? 0) }
+            var c = sorted.first { $0.fingerprint == id } ?? sorted[0]
+            c.fingerprint = id
+            c.nickname = members.first { $0.fingerprint == id }?.nickname ?? c.nickname
+            // Ranked on its best cable: the most power, the best grade, the measured cable resistance
+            c.ceilingWatts = members.compactMap(\.ceilingWatts).max()
+            c.peakInputWatts = members.map(\.peakInputWatts).max() ?? 0
+            c.peakDemandWatts = members.map(\.peakDemandWatts).max() ?? 0
+            c.secondsConnected = members.reduce(0) { $0 + $1.secondsConnected }
+            c.lastSeen = members.map(\.lastSeen).max() ?? c.lastSeen
+            c.firstSeen = members.map(\.firstSeen).min() ?? c.firstSeen
+            let totals = members.compactMap(\.efficiencyTotal), counts = members.compactMap(\.efficiencyCount)
+            c.efficiencyTotal = totals.isEmpty ? nil : totals.reduce(0, +)
+            c.efficiencyCount = counts.isEmpty ? nil : counts.reduce(0, +)
+            c.qualityGrade = members.compactMap(\.qualityGrade).max()
+            c.resistanceOhms = members.compactMap(\.resistanceOhms).min()
+            return Brick(id: id, members: sorted, combined: c)
+        }
+    }
+}
+
+public extension ChargerRanking {
+    /// Ranks physical chargers, with merged entries counted once.
+    static func rankedBricks(_ records: [ChargerRecord], by order: Order) -> [(brick: Brick, entry: Entry)] {
+        let bricks = Brick.group(records)
+        let byID = Dictionary(uniqueKeysWithValues: bricks.map { ($0.id, $0) })
+        return ranked(bricks.map(\.combined), by: order).compactMap { e in byID[e.id].map { ($0, e) } }
+    }
+}

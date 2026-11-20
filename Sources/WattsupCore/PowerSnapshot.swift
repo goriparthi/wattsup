@@ -25,6 +25,8 @@ public struct AdapterInfo: Equatable, Sendable {
     public var profiles: [PDProfile]
     public var activeProfileIndex: Int?
     public var familyCode: Int?
+    /// Reported by Apple's own chargers; third party bricks leave it out.
+    public var serial: String?
 
     public var activeProfile: PDProfile? {
         profiles.first { $0.index == activeProfileIndex }
@@ -47,8 +49,15 @@ public struct AdapterInfo: Equatable, Sendable {
         return "Power adapter"
     }
 
-    /// Stable identity for remembering a charger across plug-ins; no serial is exposed.
+    /// Identity for remembering a charger across plug ins. A charger that reports a serial number
+    /// is that serial; the rest are identified by what they negotiate, so identical units merge.
     public var fingerprint: String {
+        if let serial, !serial.isEmpty { return "serial|" + serial }
+        return legacyFingerprint
+    }
+
+    /// The identity used before serials were read, kept so older entries can be matched up.
+    public var legacyFingerprint: String {
         let pdos = profiles.map { "\(Int($0.volts * 1000))x\(Int($0.amps * 1000))" }
         return [name ?? "", manufacturer ?? "", ratedWatts.map(String.init) ?? "",
                 familyCode.map(String.init) ?? "", pdos.joined(separator: ",")]
@@ -279,7 +288,8 @@ public extension PowerSnapshot {
             isWireless: a.bool("IsWireless") ?? false,
             profiles: profiles.sorted { $0.index < $1.index },
             activeProfileIndex: a.int("UsbHvcHvcIndex"),
-            familyCode: a.signed("FamilyCode")
+            familyCode: a.signed("FamilyCode"),
+            serial: a.string("SerialString") ?? a.string("SerialNumber")
         )
         return info.ratedWatts == nil && info.profiles.isEmpty && info.name == nil ? nil : info
     }

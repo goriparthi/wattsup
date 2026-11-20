@@ -121,6 +121,21 @@ final class PowerSnapshotTests: XCTestCase {
         XCTAssertEqual(MenuBarMetric.decode("watts,bogus,amps"), [.watts, .amps])
     }
 
+    func testSeenTimestamps() {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "America/Chicago")!
+        let en = Locale(identifier: "en_US")
+        let now = cal.date(from: DateComponents(year: 2026, month: 11, day: 20, hour: 10))!
+        func at(_ d: Int, _ h: Int, _ m: Int, year: Int = 2026) -> Date {
+            cal.date(from: DateComponents(year: year, month: 11, day: d, hour: h, minute: m))!
+        }
+        func norm(_ s: String) -> String { s.replacingOccurrences(of: "\u{202F}", with: " ") }
+        XCTAssertEqual(norm(Units.seen(at(20, 8, 5), now: now, calendar: cal, locale: en)), "Today 8:05 AM")
+        XCTAssertEqual(norm(Units.seen(at(19, 16, 12), now: now, calendar: cal, locale: en)), "Yesterday 4:12 PM")
+        XCTAssertEqual(norm(Units.seen(at(17, 9, 3), now: now, calendar: cal, locale: en)), "Tue, Nov 17, 9:03 AM")
+        XCTAssertTrue(norm(Units.seen(at(17, 9, 3, year: 2025), now: now, calendar: cal, locale: en)).contains("2025"))
+    }
+
     func testUnits() {
         XCTAssertEqual(Units.watts(27.16, signed: true), "+27.2 W")
         XCTAssertEqual(Units.watts(-12.0, signed: true), "\u{2212}12.0 W")
