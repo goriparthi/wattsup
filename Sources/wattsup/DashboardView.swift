@@ -85,7 +85,8 @@ struct DashboardView: View {
                     }
                     .fixedSize(horizontal: false, vertical: true)
                     HStack(alignment: .top, spacing: 16) {
-                        ChargerCard(snapshot: s, assessment: monitor.assessment, quality: monitor.quality)
+                        ChargerCard(snapshot: s, assessment: monitor.assessment, quality: monitor.quality,
+                                    name: monitor.chargers.record(for: s.adapter?.fingerprint)?.nickname)
                         BatteryCard(snapshot: s, trend: HealthTrend(points: monitor.healthPoints))
                         if let t = s.thermals { ThermalsCard(thermals: t, batteryC: s.temperatureC) }
                     }
@@ -98,7 +99,8 @@ struct DashboardView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     ChargerHistoryCard(chargers: monitor.chargers.sorted,
                                        current: s.adapter?.fingerprint,
-                                       forget: monitor.forgetCharger)
+                                       forget: monitor.forgetCharger,
+                                       rename: monitor.renameCharger)
                 }
                 .padding(20)
             } else {
@@ -244,11 +246,13 @@ struct ChargerCard: View {
     let snapshot: PowerSnapshot
     let assessment: ChargerAssessment?
     let quality: ChargerQuality?
+    /// The name the user gave the connected charger, if any
+    var name: String? = nil
 
     var body: some View {
         Card(title: "Charger", symbol: "powerplug.fill") {
             if let a = snapshot.adapter {
-                StatRow(label: "Charger", value: a.title)
+                StatRow(label: "Charger", value: name.map { "\($0) (\(a.title))" } ?? a.title)
                 if let m = a.manufacturer { StatRow(label: "Manufacturer", value: m) }
                 StatRow(label: "Rated", value: a.ratedWatts.map { "\($0) W" } ?? "n/a")
                 StatRow(label: "Negotiated", value: "\(Units.volts(a.negotiatedVolts, digits: 1)) at \(Units.amps(a.negotiatedAmps)) = \(Units.watts(a.ceilingWatts))")
@@ -363,67 +367,128 @@ struct BatteryCard: View {
     }
 }
 
+/// Every charger you have used, ranked, with names you choose. All of it stays in a local file.
 struct ChargerHistoryCard: View {
     let chargers: [ChargerRecord]
     let current: String?
     let forget: (String) -> Void
-    /// Off for images, where a button cannot be drawn
+    var rename: (String, String) -> Void = { _, _ in }
+    /// Off for images, where buttons and text fields cannot be drawn
     var showsForget = true
+    @State private var order: ChargerRanking.Order = .overall
+    @State private var editing: String?
+    @State private var draft = ""
+    @Environment(\.themeStyle) private var style
 
     var body: some View {
-        Card(title: "Chargers you've used", symbol: "suitcase.rolling") {
+        Card(title: "Charger library", symbol: "suitcase.rolling") {
             if chargers.isEmpty {
-                Text("Every charger you plug in is remembered here with its peak load, so you can tell which bricks keep up.")
-                    .foregroundStyle(Theme.Style(large: true).secondary)
+                Text("Every charger you plug in is remembered here, ranked by what it delivers, how efficiently, and its report card. Name them so you know which brick to pack.")
+                    .foregroundStyle(style.secondary)
             } else {
-                Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 8) {
-                    GridRow {
-                        Text("Charger"); Text("Limit"); Text("Peak load"); Text("Quality"); Text("Efficiency"); Text("Mac wanted"); Text("Used"); Text("Last seen"); Text("Verdict"); if showsForget { Text("") }
-                    }
-                    .font(Theme.Style(large: true).caption)
-                    .foregroundStyle(Theme.Style(large: true).secondary)
-                    ForEach(chargers) { r in
-                        GridRow {
-                            HStack(spacing: 6) {
-                                if r.fingerprint == current {
-                                    Circle().fill(Theme.input).frame(width: 7, height: 7).accessibilityLabel("Connected")
-                                }
-                                Text(r.title)
-                            }
-                            Text(Units.watts(r.ceilingWatts, digits: 0))
-                            Text(Units.percent(r.peakLoad)).foregroundStyle(Theme.load(r.peakLoad ?? 0))
-                            if let g = r.quality {
-                                Text(g.title + (r.resistanceOhms.map { String(format: ", %.2f Ω", $0) } ?? ""))
-                                    .foregroundStyle(Color(Brand.color(g.tone)))
-                            } else {
-                                Text("Not graded").foregroundStyle(Theme.Style(large: true).secondary)
-                            }
-                            if let e = r.averageEfficiency {
-                                let grade = ChargerEfficiency.Grade.of(e)
-                                Text("\(Units.percent(e)) \(grade.title)").foregroundStyle(Color(Brand.color(grade.tone)))
-                            } else {
-                                Text("Not rated").foregroundStyle(Theme.Style(large: true).secondary)
-                            }
-                            Text(Units.watts(r.peakDemandWatts, digits: 0))
-                            Text(Units.duration(minutes: Int(r.secondsConnected / 60)))
-                            Text(r.lastSeen, format: .relative(presentation: .named))
-                            Text(r.lastVerdict ?? "Not judged yet").foregroundStyle(Theme.Style(large: true).secondary)
-                            if showsForget {
-                                Button {
-                                    forget(r.fingerprint)
-                                } label: {
-                                    Image(systemName: "trash")
-                                }
-                                .buttonStyle(.borderless)
-                                .help("Forget this charger")
-                                .accessibilityLabel("Forget \(r.title)")
-                            }
+                if showsForget {
+                    HStack {
+                        Text("Rank by").foregroundStyle(style.secondary)
+                        Picker("Rank by", selection: $order) {
+                            ForEach(ChargerRanking.Order.allCases) { Text($0.rawValue).tag($0) }
                         }
-                        .font(.callout.monospacedDigit())
+                        .labelsHidden()
+                        .fixedSize()
+                        Spacer()
                     }
+                    .font(style.body)
+                }
+                Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
+                    GridRow {
+                        Text("#"); Text("Charger"); Text("Score"); Text("Limit"); Text("Peak load"); Text("Quality")
+                        Text("Efficiency"); Text("Used"); Text("Last seen"); if showsForget { Text("") }
+                    }
+                    .font(style.caption)
+                    .foregroundStyle(style.secondary)
+                    ForEach(Array(ChargerRanking.ranked(chargers, by: order).enumerated()), id: \.element.id) { index, entry in
+                        row(index + 1, entry)
+                    }
+                }
+                Text("Overall weighs the power it can deliver (40%), efficiency (30%) and its report card (30%); anything not measured yet is left out. The same brick on a different cable negotiates differently, so it gets its own entry.")
+                    .font(style.caption)
+                    .foregroundStyle(style.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    @ViewBuilder private func row(_ rank: Int, _ entry: ChargerRanking.Entry) -> some View {
+        let r = entry.record
+        GridRow {
+            Text("\(rank)").foregroundStyle(style.secondary)
+            nameCell(r)
+            if let score = entry.score {
+                Text("\(Int(score.rounded()))")
+                    .foregroundStyle(score >= 85 ? Theme.charging : score >= 65 ? Theme.input : Theme.warning)
+                    .help("Includes " + entry.measured.joined(separator: ", "))
+            } else {
+                Text("Not yet").foregroundStyle(style.secondary)
+            }
+            Text(Units.watts(r.ceilingWatts, digits: 0))
+            Text(Units.percent(r.peakLoad)).foregroundStyle(Theme.load(r.peakLoad ?? 0))
+            if let g = r.quality {
+                Text(g.title + (r.resistanceOhms.map { String(format: ", %.2f Ω", $0) } ?? ""))
+                    .foregroundStyle(Color(Brand.color(g.tone)))
+            } else {
+                Text("Not graded").foregroundStyle(style.secondary)
+            }
+            if let e = r.averageEfficiency {
+                let grade = ChargerEfficiency.Grade.of(e)
+                Text("\(Units.percent(e)) \(grade.title)").foregroundStyle(Color(Brand.color(grade.tone)))
+            } else {
+                Text("Not rated").foregroundStyle(style.secondary)
+            }
+            Text(Units.duration(minutes: Int(r.secondsConnected / 60)))
+            Text(r.lastSeen, format: .relative(presentation: .named))
+            if showsForget {
+                Button { forget(r.fingerprint) } label: { Image(systemName: "trash") }
+                    .buttonStyle(.borderless)
+                    .help("Forget this charger")
+                    .accessibilityLabel("Forget \(r.displayName)")
+            }
+        }
+        .font(style.body.monospacedDigit())
+    }
+
+    @ViewBuilder private func nameCell(_ r: ChargerRecord) -> some View {
+        HStack(spacing: 6) {
+            if r.fingerprint == current {
+                Circle().fill(Theme.input).frame(width: 7, height: 7).accessibilityLabel("Connected")
+            }
+            if editing == r.fingerprint {
+                TextField(r.title, text: $draft)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(minWidth: 160)
+                    .onSubmit { commit(r) }
+                    .onExitCommand { editing = nil }
+            } else {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(r.displayName)
+                    if r.nickname != nil {
+                        Text(r.title).font(style.caption).foregroundStyle(style.secondary)
+                    }
+                }
+                if showsForget {
+                    Button {
+                        draft = r.nickname ?? ""
+                        editing = r.fingerprint
+                    } label: { Image(systemName: "pencil") }
+                        .buttonStyle(.borderless)
+                        .help("Name this charger")
+                        .accessibilityLabel("Rename \(r.displayName)")
                 }
             }
         }
+    }
+
+    private func commit(_ r: ChargerRecord) {
+        rename(r.fingerprint, draft)
+        editing = nil
     }
 }
 

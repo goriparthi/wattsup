@@ -188,6 +188,12 @@ final class PowerMonitor {
         }
     }
 
+    /// Names stay in the local charger file only and are never written to the log.
+    func renameCharger(_ fingerprint: String, _ name: String) {
+        chargers.rename(fingerprint, to: name)
+        persistChargers(adapterChanged: true)
+    }
+
     func forgetCharger(_ fingerprint: String) {
         chargers.forget(fingerprint)
         persistChargers(adapterChanged: true)

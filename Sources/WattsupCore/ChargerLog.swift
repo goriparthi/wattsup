@@ -23,6 +23,10 @@ public struct ChargerRecord: Codable, Equatable, Identifiable, Sendable {
     public var sagFraction: Double?
 
     public var quality: ChargerQuality.Grade? { qualityGrade.flatMap(ChargerQuality.Grade.init(rawValue:)) }
+
+    /// A name the user gave this charger; optional so older logs still decode.
+    public var nickname: String?
+    public var displayName: String { (nickname?.isEmpty == false ? nickname : nil) ?? title }
     public var id: String { fingerprint }
 
     public var averageEfficiency: Double? {
@@ -100,6 +104,17 @@ public struct ChargerLog: Codable, Equatable, Sendable {
         records.removeAll {
             $0.lastVerdict == nil && $0.secondsConnected < 20 && now.timeIntervalSince($0.lastSeen) > 3600
         }
+    }
+
+    /// Names a charger; an empty name clears it back to the detected title.
+    public mutating func rename(_ fingerprint: String, to name: String) {
+        guard let i = records.firstIndex(where: { $0.fingerprint == fingerprint }) else { return }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        records[i].nickname = trimmed.isEmpty ? nil : String(trimmed.prefix(40))
+    }
+
+    public func record(for fingerprint: String?) -> ChargerRecord? {
+        records.first { $0.fingerprint == fingerprint }
     }
 
     public mutating func forget(_ fingerprint: String) {

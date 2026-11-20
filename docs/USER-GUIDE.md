@@ -90,6 +90,15 @@ The first 20 seconds after plugging in are a negotiation phase and are never jud
 The last hour is kept at full detail in memory. One averaged point per minute is saved to disk
 for 30 days, so the dashboard charts reach back 24 hours or 7 days across restarts.
 
+## Charger library
+
+Every charger you use is kept in a local file and ranked. Sort by Overall, Power, Efficiency,
+Quality or Recently used. Overall weighs the power a charger can deliver (40%), its average
+efficiency (30%) and its report card (30%); anything not measured yet is left out rather than
+counted as zero. Use the pencil to name a charger; the name shows in the popover and the Charger
+card, and is never written to the log. The same brick on a different cable negotiates differently,
+so it gets its own entry, which also ranks your cables.
+
 ## Powering accessories
 
 USB devices the Mac is powering, such as an iPhone or an AirPods case, with the power macOS

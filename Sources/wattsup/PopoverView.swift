@@ -70,7 +70,7 @@ struct PopoverView: View {
         VStack(alignment: .leading, spacing: 10) {
             if let adapter = s.adapter {
                 DetailGroup(title: "Charger", symbol: "powerplug.fill") {
-                    StatRow(label: "Charger", value: adapter.title)
+                    StatRow(label: "Charger", value: monitor.chargers.record(for: adapter.fingerprint)?.nickname ?? adapter.title)
                     if let e = ChargerEfficiency(snapshot: s) {
                         StatRow(label: "Efficiency", value: e.summary, tint: Color(Brand.color(e.grade.tone)))
                     }
