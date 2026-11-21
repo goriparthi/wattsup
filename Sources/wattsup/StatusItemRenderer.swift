@@ -44,7 +44,11 @@ enum StatusItemRenderer {
         let fontSize: CGFloat = stacked ? 9 : 12
         let rows = (stacked ? MenuBarMetric.rows(readings) : [readings]).map { row in
             row.compactMap { metric -> NSAttributedString? in
-                metric.text(for: s).map {
+                if metric == .sparkline {
+                    return sparkline(s.recentWatts, color: color(metric.tone(for: s), colored: settings.usesColors),
+                                     size: NSSize(width: stacked ? 28 : 36, height: stacked ? 8 : 12))
+                }
+                return metric.text(for: s).map {
                     NSAttributedString(string: $0, attributes: [
                         .font: NSFont.monospacedDigitSystemFont(ofSize: fontSize, weight: .semibold),
                         .foregroundColor: color(metric.tone(for: s), colored: settings.usesColors),
@@ -124,6 +128,29 @@ enum StatusItemRenderer {
         // Template only when nothing is colored, so plain mode adapts to any menu bar
         image.isTemplate = !settings.usesColors
         return (image, segments)
+    }
+
+    /// A minute of watts as a small line, embedded as an attachment so it lays out like text.
+    static func sparkline(_ values: [Double], color: NSColor, size: NSSize) -> NSAttributedString? {
+        guard values.count >= 2, let lo = values.min(), let hi = values.max() else { return nil }
+        let span = max(hi - lo, 1)
+        let image = NSImage(size: size, flipped: false) { rect in
+            let path = NSBezierPath()
+            for (i, v) in values.enumerated() {
+                let x = rect.minX + rect.width * CGFloat(i) / CGFloat(values.count - 1)
+                let y = rect.minY + 1 + (rect.height - 2) * CGFloat((v - lo) / span)
+                i == 0 ? path.move(to: NSPoint(x: x, y: y)) : path.line(to: NSPoint(x: x, y: y))
+            }
+            path.lineWidth = 1.4
+            path.lineJoinStyle = .round
+            color.setStroke()
+            path.stroke()
+            return true
+        }
+        let attachment = NSTextAttachment()
+        attachment.image = image
+        attachment.bounds = NSRect(x: 0, y: -1, width: size.width, height: size.height)
+        return NSAttributedString(attachment: attachment)
     }
 
     static func energyTint(_ mode: EnergyMode?) -> NSColor? {

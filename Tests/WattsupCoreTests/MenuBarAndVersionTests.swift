@@ -37,3 +37,13 @@ final class MenuBarAndVersionTests: XCTestCase {
         XCTAssertFalse(VersionCompare.isNewer("0.1.0", than: "0.1.0"))
     }
 }
+
+final class SparklineMetricTests: XCTestCase {
+    func testHiddenUntilThereIsAMinuteToDraw() {
+        var s = Fixture.snapshot(Fixture.charging())
+        XCTAssertNil(MenuBarMetric.sparkline.text(for: s), "no history yet, nothing in the menu bar")
+        s.recentWatts = [20, 35, 28]
+        XCTAssertEqual(MenuBarMetric.sparkline.text(for: s), "20 to 35 W over 60 s")
+        XCTAssertEqual(MenuBarMetric.sparkline.tone(for: s), .input)
+    }
+}

@@ -121,6 +121,8 @@ public struct PowerSnapshot: Equatable, Sendable {
     public var thermals: Thermals? = nil
     /// Lifetime extremes recorded by the battery controller.
     public var lifetime: BatteryLifetime? = nil
+    /// The headline watts over the last minute, oldest first, for the menu bar graph.
+    public var recentWatts: [Double] = []
 
     /// On battery the pack is the only source, yet for a few seconds after unplugging the
     /// current still reads as charging. Such a reading is stale, not real.

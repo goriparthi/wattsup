@@ -96,6 +96,7 @@ final class PowerMonitor {
             ticksSincePeripheralScan += 1
             s.peripherals = peripherals
             s.thermals = thermals
+            s.recentWatts = history.recent(60, from: s.date).map { $0.isExternalPower ? $0.inputWatts : $0.systemWatts } + [s.headlineWatts]
             history.append(s)
             if let minute = minutes.add(PowerSample(s)) {
                 historyStore.append(minute)

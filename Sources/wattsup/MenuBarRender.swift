@@ -21,6 +21,8 @@ enum MenuBarRender {
             ("plain", [.watts, .percent], .line, .power, false),
             ("lowpower", MenuBarMetric.defaults, .line, .power, true),
             ("lowpower-battery-icon", MenuBarMetric.defaults, .line, .battery, true),
+            ("sparkline", [.watts, .sparkline, .percent], .line, .power, true),
+            ("sparkline-stacked", [.watts, .sparkline, .percent, .systemWatts], .stacked, .power, true),
         ]
         for (name, metrics, layout, icon, colors) in cases {
             settings.metrics = metrics
@@ -29,6 +31,8 @@ enum MenuBarRender {
             settings.usesColors = colors
             // The live reading, with Low Power switched on for the two cases that show it
             s.energyMode = name.hasPrefix("lowpower") ? .low : nil
+            // A real minute is not available in a one shot render, so this draws a plausible ripple around the live value
+            if name.hasPrefix("sparkline") { s.recentWatts = (0..<30).map { s.headlineWatts * (1 + 0.15 * sin(Double($0) / 3)) } }
             let image = StatusItemRenderer.image(metrics.filter { $0.text(for: s) != nil }, snapshot: s, settings: settings)
             for dark in [true, false] {
                 write(image, dark: dark, to: url.appendingPathComponent("\(name)-\(dark ? "dark" : "light").png"))

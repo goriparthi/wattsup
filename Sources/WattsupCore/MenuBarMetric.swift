@@ -9,7 +9,7 @@ public enum MetricTone: String, Sendable {
 /// the charger input when plugged in, the battery pack when not.
 public enum MenuBarMetric: String, CaseIterable, Codable, Identifiable, Sendable {
     case watts, volts, amps, systemWatts, batteryWatts, wallWatts, adapterLoss, chargerLoad
-    case percent, time, temperature, health, energyMode, peripherals, chipTemp, fanSpeed
+    case percent, time, temperature, health, energyMode, peripherals, chipTemp, fanSpeed, sparkline
 
     /// Shown out of the box: wall draw, charger load, Mac use and percent. The two charger
     /// readings drop out on battery, leaving Mac use and percent.
@@ -42,6 +42,7 @@ public enum MenuBarMetric: String, CaseIterable, Codable, Identifiable, Sendable
         case .peripherals: return "Powering accessories"
         case .chipTemp: return "Chip temperature"
         case .fanSpeed: return "Fan speed"
+        case .sparkline: return "Live graph"
         }
     }
 
@@ -58,6 +59,7 @@ public enum MenuBarMetric: String, CaseIterable, Codable, Identifiable, Sendable
         case .peripherals: return "Power the Mac allocated to USB devices, shown when any are plugged in"
         case .chipTemp: return "Average of the CPU sensors"
         case .fanSpeed: return "The faster fan; hidden on Macs without fans"
+        case .sparkline: return "Power in or out over the last 60 seconds, drawn in the menu bar"
         case .time: return "macOS's estimate; ~ marks Wattsup's own when macOS has none"
         case .percent, .temperature, .health: return ""
         }
@@ -93,6 +95,10 @@ public enum MenuBarMetric: String, CaseIterable, Codable, Identifiable, Sendable
             return s.peripherals.isEmpty ? nil : String(format: "USB %.0fW", s.peripherals.allocatedWatts)
         case .chipTemp: return s.thermals?.cpuC.map { String(format: "%.0f°C", $0) }
         case .fanSpeed: return s.thermals?.fanRPM.map { $0 < 50 ? "Fans off" : String(format: "%.0frpm", $0) }
+        case .sparkline:
+            // Drawn as a graph by the renderer; this text is what tooltips and VoiceOver hear
+            guard s.recentWatts.count >= 2, let lo = s.recentWatts.min(), let hi = s.recentWatts.max() else { return nil }
+            return String(format: "%.0f to %.0f W over 60 s", lo, hi)
         }
     }
 
@@ -116,6 +122,7 @@ public enum MenuBarMetric: String, CaseIterable, Codable, Identifiable, Sendable
         case .peripherals: return .system
         case .chipTemp: return (s.thermals?.cpuHottestC ?? 0) >= 95 ? .warning : .neutral
         case .fanSpeed: return (s.thermals?.fans.compactMap(\.fraction).max() ?? 0) >= 0.8 ? .warning : .neutral
+        case .sparkline: return s.isExternalPower ? .input : .draining
         }
     }
 
