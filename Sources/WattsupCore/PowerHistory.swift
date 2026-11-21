@@ -38,6 +38,18 @@ public struct PowerSample: Identifiable, Equatable, Codable, Sendable {
     }
 }
 
+public extension PowerSample {
+    /// Minutes saved by 0.0.6 and earlier took Mac use from SystemLoad, which can exceed what the
+    /// charger delivers; rebalance them as input minus battery. Balanced minutes are unchanged.
+    func balanced() -> PowerSample {
+        guard isExternalPower, inputWatts > 0, systemWatts + batteryWatts > inputWatts + 1 else { return self }
+        var out = self
+        out.systemWatts = max(0, inputWatts - batteryWatts)
+        out.demandWatts = max(0, demandWatts - (systemWatts - out.systemWatts))
+        return out
+    }
+}
+
 /// Rolling in-memory window of samples for the charts and the charger check.
 public struct PowerHistory: Sendable {
     public private(set) var samples: [PowerSample] = []
@@ -139,7 +151,7 @@ public enum HistoryArchive {
     public static func decode(_ data: Data) -> [PowerSample] {
         let d = JSONDecoder()
         d.dateDecodingStrategy = .secondsSince1970
-        return data.split(separator: 0x0A).compactMap { try? d.decode(PowerSample.self, from: Data($0)) }
+        return data.split(separator: 0x0A).compactMap { try? d.decode(PowerSample.self, from: Data($0)).balanced() }
     }
 
     /// Day files older than `days`, by name, for pruning.

@@ -36,6 +36,24 @@ final class HistoryArchiveTests: XCTestCase {
         let names = ["1970-01-01.jsonl", "1970-02-09.jsonl", "notes.txt"]
         XCTAssertEqual(HistoryArchive.expired(names, now: now, days: 30), ["1970-01-01.jsonl"])
     }
+
+    func testRebalancesMinutesWhereMacUseExceededTheCharger() throws {
+        // A 0.0.6 minute: 87 W in, battery took 70.7 W, yet SystemLoad put the Mac at 82.5 W
+        var m = sample(at: 60, input: 86957)
+        m.batteryWatts = 70.7; m.systemWatts = 82.5; m.demandWatts = 82.5 + 92
+        var data = try XCTUnwrap(HistoryArchive.encode(m))
+        data.append(0x0A)
+        let fixed = try XCTUnwrap(HistoryArchive.decode(data).first)
+        XCTAssertEqual(fixed.systemWatts, 86.957 - 70.7, accuracy: 0.001)
+        XCTAssertEqual(fixed.demandWatts, 86.957 - 70.7 + 92, accuracy: 0.001)
+        XCTAssertEqual(fixed.balanced(), fixed, "already balanced minutes are unchanged")
+    }
+
+    func testLeavesBatteryMinutesAlone() {
+        var m = sample(at: 60, input: 0)
+        m.isExternalPower = false; m.systemWatts = 9; m.batteryWatts = -9; m.demandWatts = 9
+        XCTAssertEqual(m.balanced(), m)
+    }
 }
 
 final class ChartGapTests: XCTestCase {

@@ -84,19 +84,20 @@ struct DashboardView: View {
                         .frame(width: 360)
                     }
                     .fixedSize(horizontal: false, vertical: true)
+                    // Short cards stack under Battery and Thermals so the three columns end together
                     HStack(alignment: .top, spacing: 16) {
                         ChargerCard(snapshot: s, assessment: monitor.assessment, quality: monitor.quality,
                                     name: monitor.chargers.name(for: s.adapter?.fingerprint),
                                     test: monitor.chargerTest)
-                        BatteryCard(snapshot: s, trend: HealthTrend(points: monitor.healthPoints))
-                        if let t = s.thermals { ThermalsCard(thermals: t, batteryC: s.temperatureC) }
-                    }
-                    .fixedSize(horizontal: false, vertical: true)
-                    charts
-                    HStack(alignment: .top, spacing: 16) {
-                        EnergyCard(days: EnergyAccount.daily(monitor.archive), price: settings.pricePerKWh)
-                        BatteryCareCard(care: BatteryCare(samples: monitor.archive))
-                        EnergyByAppCard(impact: monitor.impact)
+                        VStack(spacing: 16) {
+                            BatteryCard(snapshot: s, trend: HealthTrend(points: monitor.healthPoints))
+                            BatteryCareCard(care: BatteryCare(samples: monitor.archive))
+                        }
+                        VStack(spacing: 16) {
+                            if let t = s.thermals { ThermalsCard(thermals: t, batteryC: s.temperatureC) }
+                            EnergyCard(days: EnergyAccount.daily(monitor.archive), price: settings.pricePerKWh)
+                            EnergyByAppCard(impact: monitor.impact)
+                        }
                     }
                     .fixedSize(horizontal: false, vertical: true)
                     ReceiptsCard(sessions: monitor.sessions, names: { monitor.chargers.name(for: $0) })
@@ -107,6 +108,7 @@ struct DashboardView: View {
                                        rename: monitor.renameCharger,
                                        merge: monitor.mergeCharger,
                                        separate: monitor.separateCharger)
+                    charts
                 }
                 .padding(20)
             } else {
@@ -276,6 +278,12 @@ struct ChargerCard: View {
                 if let demand = assessment?.peakDemandWatts {
                     StatRow(label: "Mac would use, peak", value: Units.watts(demand))
                 }
+                if a.isWireless { StatRow(label: "Type", value: "Wireless") }
+                if !a.profiles.isEmpty {
+                    Divider()
+                    Text("Power profiles this charger offers").font(Theme.Style(large: true).caption).foregroundStyle(Theme.Style(large: true).secondary)
+                    ProfileTable(adapter: a)
+                }
                 Divider()
                 EfficiencyRating(snapshot: snapshot)
                 if let test {
@@ -285,12 +293,6 @@ struct ChargerCard: View {
                 if let quality {
                     Divider()
                     ReportCard(quality: quality)
-                }
-                if a.isWireless { StatRow(label: "Type", value: "Wireless") }
-                if !a.profiles.isEmpty {
-                    Divider()
-                    Text("Power profiles this charger offers").font(Theme.Style(large: true).caption).foregroundStyle(Theme.Style(large: true).secondary)
-                    ProfileTable(adapter: a)
                 }
             } else {
                 Text("No charger connected. Plug one in to see what it offers and how hard it's working.")
