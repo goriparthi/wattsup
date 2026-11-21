@@ -86,7 +86,8 @@ struct DashboardView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     HStack(alignment: .top, spacing: 16) {
                         ChargerCard(snapshot: s, assessment: monitor.assessment, quality: monitor.quality,
-                                    name: monitor.chargers.name(for: s.adapter?.fingerprint))
+                                    name: monitor.chargers.name(for: s.adapter?.fingerprint),
+                                    test: monitor.chargerTest)
                         BatteryCard(snapshot: s, trend: HealthTrend(points: monitor.healthPoints))
                         if let t = s.thermals { ThermalsCard(thermals: t, batteryC: s.temperatureC) }
                     }
@@ -253,6 +254,7 @@ struct ChargerCard: View {
     let quality: ChargerQuality?
     /// The name the user gave the connected charger, if any
     var name: String? = nil
+    var test: ChargerTestRunner? = nil
 
     var body: some View {
         Card(title: "Charger", symbol: "powerplug.fill") {
@@ -276,6 +278,10 @@ struct ChargerCard: View {
                 }
                 Divider()
                 EfficiencyRating(snapshot: snapshot)
+                if let test {
+                    Divider()
+                    ChargerTestView(test: test, snapshot: snapshot)
+                }
                 if let quality {
                     Divider()
                     ReportCard(quality: quality)
@@ -385,7 +391,6 @@ struct ChargerHistoryCard: View {
     var showsForget = true
     @State private var order: ChargerRanking.Order = .overall
     @State private var editing: String?
-    @State private var draft = ""
     @State private var expanded: Set<String> = []
     @Environment(\.themeStyle) private var style
 
@@ -435,7 +440,8 @@ struct ChargerHistoryCard: View {
         let r = entry.record
         GridRow {
             Text("\(rank)").foregroundStyle(style.secondary)
-            nameCell(r, brick: brick)
+            ChargerNameCell(record: r, brick: brick, current: current, editable: showsForget,
+                            expanded: $expanded, editing: $editing, rename: rename)
             if let score = entry.score {
                 Text("\(Int(score.rounded()))")
                     .foregroundStyle(score >= 85 ? Theme.charging : score >= 65 ? Theme.input : Theme.warning)
@@ -521,50 +527,6 @@ struct ChargerHistoryCard: View {
         .font(style.caption.monospacedDigit())
     }
 
-    @ViewBuilder private func nameCell(_ r: ChargerRecord, brick: Brick) -> some View {
-        HStack(spacing: 6) {
-            if brick.members.contains(where: { $0.fingerprint == current }) {
-                Circle().fill(Theme.input).frame(width: 7, height: 7).accessibilityLabel("Connected")
-            }
-            if editing == r.fingerprint {
-                TextField(r.title, text: $draft)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(minWidth: 160)
-                    .onSubmit { commit(r) }
-                    .onExitCommand { editing = nil }
-            } else {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(r.displayName)
-                    if brick.members.count > 1 {
-                        Button {
-                            if expanded.contains(brick.id) { expanded.remove(brick.id) } else { expanded.insert(brick.id) }
-                        } label: {
-                            Text("\(brick.members.count) cables \(expanded.contains(brick.id) ? "▾" : "▸")")
-                        }
-                        .buttonStyle(.borderless)
-                        .font(style.caption)
-                        .foregroundStyle(style.secondary)
-                    } else if r.nickname != nil {
-                        Text(r.title).font(style.caption).foregroundStyle(style.secondary)
-                    }
-                }
-                if showsForget {
-                    Button {
-                        draft = r.nickname ?? ""
-                        editing = r.fingerprint
-                    } label: { Image(systemName: "pencil") }
-                        .buttonStyle(.borderless)
-                        .help("Name this charger")
-                        .accessibilityLabel("Rename \(r.displayName)")
-                }
-            }
-        }
-    }
-
-    private func commit(_ r: ChargerRecord) {
-        rename(r.fingerprint, draft)
-        editing = nil
-    }
 }
 
 struct AccessoriesCard: View {
@@ -931,6 +893,100 @@ struct ReceiptsCard: View {
                         }
                         .font(style.body.monospacedDigit())
                     }
+                }
+            }
+        }
+    }
+}
+
+/// Runs the one click charger and cable test and shows its result.
+struct ChargerTestView: View {
+    let test: ChargerTestRunner
+    let snapshot: PowerSnapshot
+    @Environment(\.themeStyle) private var style
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Charger and cable test").font(style.body.weight(.semibold))
+                Spacer()
+                if test.isRunning {
+                    Button("Cancel") { test.cancel() }
+                } else {
+                    Button("Test now") { test.start(on: snapshot) }
+                        .help("About 20 seconds: briefly loads the CPU so the current swings, which lets Wattsup measure the cable")
+                }
+            }
+            switch test.state {
+            case .ready:
+                Text("Puts the Mac under full load for 10 of 20 seconds so the current swings, then grades the cable, voltage sag and rating on the spot. Stops if you unplug or the chip gets hot.")
+                    .font(style.caption).foregroundStyle(style.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            case .running(let phase, let progress):
+                ProgressView(value: progress) { Text(phase.rawValue).font(style.caption) }
+            case .failed(let reason):
+                Text(reason).font(style.caption).foregroundStyle(Theme.warning)
+            case .done(let quality, let at, let swing):
+                Text("Tested \(Units.seen(at)), current swung \(Units.amps(swing))"
+                     + (quality.resistanceOhms == nil ? ". The swing was too small to measure the cable; a charger already at its limit cannot swing further." : "."))
+                    .font(style.caption).foregroundStyle(style.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                ReportCard(quality: quality)
+            }
+        }
+    }
+}
+
+/// A charger's name in the library: connected dot, name or rename field, and the cable toggle.
+struct ChargerNameCell: View {
+    let record: ChargerRecord
+    let brick: Brick
+    let current: String?
+    let editable: Bool
+    @Binding var expanded: Set<String>
+    @Binding var editing: String?
+    let rename: (String, String) -> Void
+    @State private var draft = ""
+    @Environment(\.themeStyle) private var style
+
+    var body: some View {
+        HStack(spacing: 6) {
+            if brick.members.contains(where: { $0.fingerprint == current }) {
+                Circle().fill(Theme.input).frame(width: 7, height: 7).accessibilityLabel("Connected")
+            }
+            if editing == record.fingerprint {
+                TextField(record.title, text: $draft)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(minWidth: 160)
+                    .onSubmit {
+                        rename(record.fingerprint, draft)
+                        editing = nil
+                    }
+                    .onExitCommand { editing = nil }
+            } else {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(record.displayName)
+                    if brick.members.count > 1 {
+                        Button {
+                            if expanded.contains(brick.id) { expanded.remove(brick.id) } else { expanded.insert(brick.id) }
+                        } label: {
+                            Text("\(brick.members.count) cables \(expanded.contains(brick.id) ? "▾" : "▸")")
+                        }
+                        .buttonStyle(.borderless)
+                        .font(style.caption)
+                        .foregroundStyle(style.secondary)
+                    } else if record.nickname != nil {
+                        Text(record.title).font(style.caption).foregroundStyle(style.secondary)
+                    }
+                }
+                if editable {
+                    Button {
+                        draft = record.nickname ?? ""
+                        editing = record.fingerprint
+                    } label: { Image(systemName: "pencil") }
+                        .buttonStyle(.borderless)
+                        .help("Name this charger")
+                        .accessibilityLabel("Rename \(record.displayName)")
                 }
             }
         }

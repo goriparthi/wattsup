@@ -4,6 +4,8 @@ source "$(dirname "$0")/lib/common.sh"
 APP="${1:-$APP_BUNDLE}"
 [[ -d "$APP" ]] || die "no bundle at $APP; run make bundle first"
 plutil -lint "$APP/Contents/Info.plist" >/dev/null || die "Info.plist is not valid"
+# Before anything runs it: a binary matching XProtect is killed and trashed on launch
+"$REPO_ROOT/scripts/xprotect-scan.sh" "$APP"
 codesign --verify --strict "$APP" || die "signature does not verify"
 BIN_PATH="$APP/Contents/MacOS/$BIN_NAME"
 REPORTED="$("$BIN_PATH" --version | awk '{print $2}')"

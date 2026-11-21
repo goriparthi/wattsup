@@ -17,6 +17,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install xcodegen
-        run: brew install xcodegen actionlint
+        run: brew install xcodegen actionlint yara
       - name: Run the check suite
         run: make ci

@@ -115,3 +115,25 @@ final class AppPresenceTests: XCTestCase {
         XCTAssertEqual(app.activationPolicy(), .accessory, "back to menu bar only once closed")
     }
 }
+
+final class CPULoadTests: XCTestCase {
+    private func cpuSeconds() -> Double {
+        var t = timespec()
+        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &t)
+        return Double(t.tv_sec) + Double(t.tv_nsec) / 1e9
+    }
+
+    func testLoadRunsOnEveryCoreAndStops() throws {
+        let load = CPULoad()
+        let before = cpuSeconds()
+        load.start()
+        Thread.sleep(forTimeInterval: 1)
+        load.stop()
+        let during = cpuSeconds() - before
+        XCTAssertGreaterThan(during, 1.5, "several cores busy for a second")
+        Thread.sleep(forTimeInterval: 0.3)
+        let settled = cpuSeconds()
+        Thread.sleep(forTimeInterval: 1)
+        XCTAssertLessThan(cpuSeconds() - settled, 0.2, "nothing keeps running after stop")
+    }
+}

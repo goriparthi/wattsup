@@ -29,6 +29,7 @@ final class PowerMonitor {
     let energy = EnergyModeController()
     let impact = EnergyImpactMonitor()
     let accessories = AccessoryBatteryReader()
+    let chargerTest = ChargerTestRunner()
     @ObservationIgnored private let store = ChargerStore()
     @ObservationIgnored private var timer: Timer?
     @ObservationIgnored private var lastSave = Date.distantPast
@@ -58,6 +59,12 @@ final class PowerMonitor {
     }
 
     func start(interval: TimeInterval = 2) {
+        chargerTest.hottestCore = { [weak self] in self?.snapshot?.thermals?.cpuHottestC }
+        chargerTest.finished = { [weak self] quality, adapter in
+            guard let self else { return }
+            self.chargers.store(quality, for: adapter.fingerprint)
+            self.persistChargers(adapterChanged: true)
+        }
         energy.start()
         refresh()
         let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in

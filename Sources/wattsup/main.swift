@@ -30,6 +30,25 @@ case "--render-flow-frames":
     let fps = args.count > 2 ? Double(args[2]) ?? 30 : 30
     let warmup = args.count > 3 ? Double(args[3]) ?? 3 : 3
     exit(MainActor.assumeIsolated { FlowFramesRender.run(directory: dir, seconds: seconds, fps: fps, warmup: warmup) })
+case "--test-charger":
+    // Runs the charger and cable test once from the command line and prints the report card
+    exit(MainActor.assumeIsolated { () -> Int32 in
+        guard case .properties(let props) = SmartBattery.read(), let s = PowerSnapshot(registry: props) else { return 1 }
+        let runner = ChargerTestRunner()
+        var code: Int32 = 1
+        runner.finished = { q, _ in
+            for c in q.checks { print("\(c.name): \(c.value) [\(c.grade?.title ?? "ungraded")] \(c.detail)") }
+            print("Overall: \(q.overall?.title ?? "ungraded")")
+            code = 0
+        }
+        runner.start(on: s)
+        if case .failed(let reason) = runner.state { print(reason); return 2 }
+        let end = Date().addingTimeInterval(ChargerTestRunner.total + 3)
+        while Date() < end, runner.isRunning { RunLoop.main.run(until: Date().addingTimeInterval(0.2)) }
+        if case .done(_, _, let swing) = runner.state { print(String(format: "Current swing: %.2f A", swing)) }
+        if case .failed(let reason) = runner.state { print(reason) }
+        return code
+    })
 case "--render-cards":
     let args = Array(CommandLine.arguments.dropFirst(2))
     let warmup = args.count > 1 ? Double(args[1]) ?? 60 : 60

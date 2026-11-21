@@ -9,6 +9,7 @@ else
     "$REPO_ROOT/scripts/bundle.sh"
 fi
 
+"$REPO_ROOT/scripts/xprotect-scan.sh" "$APP_BUNDLE"
 DMG="$DIST_DIR/$APP_NAME-$VERSION.dmg"
 STAGE="$DIST_DIR/dmg-stage"
 rm -rf "$STAGE" "$DMG"
