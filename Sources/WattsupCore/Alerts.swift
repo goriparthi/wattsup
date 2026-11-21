@@ -1,7 +1,7 @@
 import Foundation
 
 public enum AlertKind: String, CaseIterable, Codable, Sendable, Identifiable {
-    case cantKeepUp, cableCapped, batteryHot, chargedTo, unpluggedLow
+    case cantKeepUp, cableCapped, batteryHot, chargedTo, unpluggedLow, chargingReceipt
     public var id: String { rawValue }
 
     public var title: String {
@@ -11,10 +11,11 @@ public enum AlertKind: String, CaseIterable, Codable, Sendable, Identifiable {
         case .batteryHot: return "Battery is hot"
         case .chargedTo: return "Charged to a level"
         case .unpluggedLow: return "Unplugged at low battery"
+        case .chargingReceipt: return "Charging receipt when you unplug"
         }
     }
 
-    public var enabledByDefault: Bool { self != .chargedTo }
+    public var enabledByDefault: Bool { self != .chargedTo && self != .chargingReceipt }
 }
 
 public struct AlertEvent: Equatable, Sendable {

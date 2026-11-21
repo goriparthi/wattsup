@@ -74,3 +74,33 @@ struct HealthStore {
         }
     }
 }
+
+/// Charging receipts: Application Support/Wattsup/sessions.jsonl, one line per plug in.
+struct SessionStore {
+    let url = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("Wattsup/sessions.jsonl")
+
+    func load() -> [ChargingSession] {
+        guard let data = try? Data(contentsOf: url) else { return [] }
+        let d = JSONDecoder()
+        d.dateDecodingStrategy = .secondsSince1970
+        return data.split(separator: 0x0A).compactMap { try? d.decode(ChargingSession.self, from: Data($0)) }
+    }
+
+    func append(_ session: ChargingSession) {
+        let e = JSONEncoder()
+        e.dateEncodingStrategy = .secondsSince1970
+        guard var line = try? e.encode(session) else { return }
+        line.append(0x0A)
+        do {
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            if !FileManager.default.fileExists(atPath: url.path) { FileManager.default.createFile(atPath: url.path, contents: nil) }
+            let handle = try FileHandle(forWritingTo: url)
+            defer { try? handle.close() }
+            try handle.seekToEnd()
+            try handle.write(contentsOf: line)
+        } catch {
+            log.error("Could not write a charging receipt: \(error.localizedDescription)")
+        }
+    }
+}

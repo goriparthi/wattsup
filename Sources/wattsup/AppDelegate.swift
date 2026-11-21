@@ -43,6 +43,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self else { return }
             self.updateStatusItem()
             self.alerts.evaluate(self.monitor.snapshot, self.monitor.assessment)
+            self.alerts.receipt(self.monitor.latestReceipt,
+                                chargerName: self.monitor.chargers.name(for: self.monitor.latestReceipt?.charger))
         }
         alerts.start()
         monitor.start()

@@ -94,10 +94,13 @@ struct DashboardView: View {
                     charts
                     HStack(alignment: .top, spacing: 16) {
                         EnergyCard(days: EnergyAccount.daily(monitor.archive), price: settings.pricePerKWh)
+                        BatteryCareCard(care: BatteryCare(samples: monitor.archive))
                         EnergyByAppCard(impact: monitor.impact)
                     }
                     .fixedSize(horizontal: false, vertical: true)
+                    ReceiptsCard(sessions: monitor.sessions, names: { monitor.chargers.name(for: $0) })
                     ChargerHistoryCard(chargers: monitor.chargers.sorted,
+                                       advice: PackAdvice(samples: monitor.archive, bricks: Brick.group(monitor.chargers.records)),
                                        current: s.adapter?.fingerprint,
                                        forget: monitor.forgetBrick,
                                        rename: monitor.renameCharger,
@@ -372,6 +375,7 @@ struct BatteryCard: View {
 /// Every charger you have used, ranked, with names you choose. All of it stays in a local file.
 struct ChargerHistoryCard: View {
     let chargers: [ChargerRecord]
+    var advice: PackAdvice? = nil
     let current: String?
     let forget: (String) -> Void
     var rename: (String, String) -> Void = { _, _ in }
@@ -391,6 +395,7 @@ struct ChargerHistoryCard: View {
                 Text("Every charger you plug in is remembered here, ranked by what it delivers, how efficiently, and its report card. Name them so you know which brick to pack.")
                     .foregroundStyle(style.secondary)
             } else {
+                if let advice { PackAdviceView(advice: advice) }
                 if showsForget {
                     HStack {
                         Text("Rank by").foregroundStyle(style.secondary)
@@ -837,6 +842,96 @@ struct HealthTrendView: View {
                 if let c = trend.perHundredCycles { StatRow(label: "Wear per 100 cycles", value: String(format: "%.2f points", c * 100)) }
                 StatRow(label: "Reaches 80%",
                         value: trend.monthsToService.map { $0 < 1 ? "within a month" : "in about \(Int($0.rounded())) months" } ?? "No decline yet")
+            }
+        }
+    }
+}
+
+/// Which charger to take, from the library and how hard this Mac is really pushed.
+struct PackAdviceView: View {
+    let advice: PackAdvice
+    @Environment(\.themeStyle) private var style
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "suitcase.rolling.fill").foregroundStyle(Theme.accent).font(.title3)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(advice.headline).font(style.body.weight(.semibold))
+                Text(advice.detail).font(style.caption).foregroundStyle(style.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(String(format: "Based on %.0f hours on a charger in the last 30 days.", advice.sampleHours))
+                    .font(style.caption).foregroundStyle(style.secondary)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Theme.accent.opacity(0.08)))
+    }
+}
+
+/// Habits that wear a battery, from Wattsup's own history, with plain advice.
+struct BatteryCareCard: View {
+    let care: BatteryCare?
+    @Environment(\.themeStyle) private var style
+
+    var body: some View {
+        Card(title: "Battery care", symbol: "heart.text.square") {
+            if let care {
+                StatRow(label: "Plugged in above 95%", value: String(format: "%.0f h", care.highChargeHours))
+                StatRow(label: "At 40 °C or hotter", value: String(format: "%.1f h", care.hotHours),
+                        tint: care.hotHours >= 1 ? Theme.warning : nil)
+                StatRow(label: "Ran below 10%", value: "\(care.deepDischarges)×")
+                if let c = care.cyclesPerWeek { StatRow(label: "Cycles per week", value: String(format: "%.1f", c)) }
+                ForEach(care.tips, id: \.self) { tip in
+                    Label(tip, systemImage: "lightbulb")
+                        .font(style.caption)
+                        .foregroundStyle(style.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Text(String(format: "From %.0f hours of Wattsup history in the last 30 days.", care.coveredHours))
+                    .font(style.caption).foregroundStyle(style.secondary)
+            } else {
+                Text("Collecting history. Advice appears after an hour of readings.").foregroundStyle(style.secondary)
+            }
+        }
+    }
+}
+
+/// A receipt per charging session, newest first.
+struct ReceiptsCard: View {
+    let sessions: [ChargingSession]
+    let names: (String) -> String?
+    @Environment(\.themeStyle) private var style
+
+    var body: some View {
+        Card(title: "Charging receipts", symbol: "receipt") {
+            if sessions.isEmpty {
+                Text("Every time you charge, Wattsup writes a receipt here: the charger, how far it got, how fast, and whether the charger held it back.")
+                    .foregroundStyle(style.secondary)
+            } else {
+                Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
+                    GridRow {
+                        Text("Started"); Text("Charger"); Text("Charge"); Text("Took"); Text("Into battery")
+                        Text("Average"); Text("Peak"); Text("To 80%"); Text("Charger limited")
+                    }
+                    .font(style.caption)
+                    .foregroundStyle(style.secondary)
+                    ForEach(sessions.suffix(10).reversed()) { r in
+                        GridRow {
+                            Text(Units.seen(r.start))
+                            Text(names(r.charger) ?? r.chargerTitle).lineLimit(1)
+                            Text("\(r.startPercent)% → \(r.endPercent)%")
+                            Text(Units.duration(minutes: max(1, Int(r.duration / 60))))
+                            Text(String(format: "%.1f Wh", r.batteryWh))
+                            Text(Units.watts(r.averageInputWatts, digits: 0))
+                            Text(Units.watts(r.peakInputWatts, digits: 0))
+                            Text(r.minutesTo80.map { Units.duration(minutes: Int($0.rounded())) } ?? "n/a")
+                            Text(Units.percent(r.limitedShare))
+                                .foregroundStyle(r.limitedShare >= 0.5 ? Theme.warning : style.secondary)
+                        }
+                        .font(style.body.monospacedDigit())
+                    }
+                }
             }
         }
     }

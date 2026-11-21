@@ -21,6 +21,9 @@ final class PowerMonitor {
     private(set) var archive: [PowerSample] = []
     /// Daily battery health, for the wear trend.
     private(set) var healthPoints: [HealthPoint] = []
+    /// Charging receipts, newest last, and the one just finished for an optional notification.
+    private(set) var sessions: [ChargingSession] = []
+    private(set) var latestReceipt: ChargingSession?
 
     @ObservationIgnored var onUpdate: (() -> Void)?
     let energy = EnergyModeController()
@@ -38,6 +41,8 @@ final class PowerMonitor {
     @ObservationIgnored private let historyStore = HistoryStore()
     @ObservationIgnored private var minutes = MinuteAggregator()
     @ObservationIgnored private let healthStore = HealthStore()
+    @ObservationIgnored private let sessionStore = SessionStore()
+    @ObservationIgnored private var tracker = SessionTracker()
     @ObservationIgnored private var lastWidget: WidgetSnapshot?
     private static let peripheralScanEvery = 3
     /// Starts due, so the first reading already includes attached devices
@@ -47,6 +52,7 @@ final class PowerMonitor {
         chargers = store.load()
         chargers.pruneTransient()
         healthPoints = healthStore.load()
+        sessions = sessionStore.load()
         archive = historyStore.load(days: HistoryStore.keepDays)
         historyStore.prune()
     }
@@ -101,6 +107,8 @@ final class PowerMonitor {
             // Nothing is logged while the charger is still negotiating its real power profile
             if a.verdict != .negotiating { chargers.record(s, verdict: a.verdict.isSettled ? a.headline : nil) }
             recordHealth(s)
+            let limited = a.verdict == .bottleneck || a.verdict == .notKeepingUp
+            if let done = tracker.update(s, limited: limited) { finishSession(done) }
             trackDropouts(from: snapshot, to: s)
             updateQuality(s)
             publishToWidget(s, verdict: a)
@@ -214,7 +222,15 @@ final class PowerMonitor {
         persistChargers(adapterChanged: true)
     }
 
+    private func finishSession(_ session: ChargingSession) {
+        sessionStore.append(session)
+        sessions.append(session)
+        latestReceipt = session
+        log.info("Charging session ended: \(session.summary)")
+    }
+
     func flush() {
+        if let open = tracker.current { sessionStore.append(open) }
         if let partial = minutes.pending() { historyStore.append(partial) }
         store.save(chargers)
     }

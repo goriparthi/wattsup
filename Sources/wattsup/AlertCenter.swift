@@ -23,6 +23,22 @@ final class AlertCenter {
         }
     }
 
+    private var lastReceipt: Date?
+
+    /// Posts a finished charging session, if the user turned receipts on.
+    func receipt(_ session: ChargingSession?, chargerName: String?) {
+        guard let session, session.start != lastReceipt else { return }
+        lastReceipt = session.start
+        guard canNotify, settings.alerts.contains(.chargingReceipt) else { return }
+        let content = UNMutableNotificationContent()
+        content.title = "Charged on \(chargerName ?? session.chargerTitle)"
+        content.body = session.summary
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "receipt-\(session.start.timeIntervalSince1970)",
+                                                                    content: content, trigger: nil)) { error in
+            if let error { log.error("Could not post a receipt: \(error.localizedDescription)") }
+        }
+    }
+
     func evaluate(_ snapshot: PowerSnapshot?, _ assessment: ChargerAssessment?) {
         guard let snapshot else { return }
         engine.enabled = settings.alerts
