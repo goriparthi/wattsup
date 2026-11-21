@@ -107,6 +107,18 @@ final class PowerSnapshotTests: XCTestCase {
         XCTAssertEqual(s.systemWatts, 43.02 - 12.789 * 2.124, accuracy: 0.001)
     }
 
+    func testFastChargingBalancesWhenSystemLoadDisagrees() {
+        // Seen on a 16 inch MacBook Pro at 59%: SystemLoad 82.5 W while the pack took 70.7 W of 87 W
+        var d = Fixture.charging()
+        d["Voltage"] = 12246
+        d["InstantAmperage"] = NSNumber(value: Int64(5774))
+        d["PowerTelemetryData"] = ["SystemPowerIn": 86957, "SystemLoad": 82533] as [String: Any]
+        let s = Fixture.snapshot(d)
+        XCTAssertEqual(s.batteryWatts, 12.246 * 5.774, accuracy: 0.001)
+        XCTAssertEqual(s.systemWatts, 86.957 - 12.246 * 5.774, accuracy: 0.001)
+        XCTAssertEqual(s.systemWatts + s.batteryWatts, 86.957, accuracy: 0.001, "the flow balances")
+    }
+
     func testMissingChargeReadingIsNil() {
         XCTAssertNil(PowerSnapshot(registry: ["Voltage": 12000]))
     }

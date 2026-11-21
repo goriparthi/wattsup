@@ -10,7 +10,7 @@ readings. Hover any number for a tooltip naming it. Click it for the popover.
 Out of the box it shows **From the wall | Charger load | Mac uses | Battery percent**. On battery
 the two charger readings drop out, leaving Mac use and percent.
 
-Settings (gear menu, then Settings) lists all 16 readings. Tick the ones to show; use the arrows to
+Settings (gear menu, then Settings) lists all 17 readings. Tick the ones to show; use the arrows to
 reorder any of them. Choose one line or two stacked rows, colors on or off, the outline, and the
 icon (power bolt and plug, battery state, or none).
 
@@ -18,7 +18,7 @@ icon (power bolt and plug, battery state, or none).
 | --- | --- | --- |
 | Power in or out | Watts the charger delivers into the Mac | Watts the Mac draws from the battery |
 | Voltage, Current | Charger input bus | Battery pack |
-| Mac uses | What the Mac itself consumes, including powered accessories | Same |
+| Mac uses | Charger input minus what the battery takes, so the flow always balances | What the battery supplies |
 | Battery power | Plus while charging | Minus while draining |
 | From the wall | Charger input plus its conversion loss | Hidden |
 | Charger loss | Watts the charger turns into heat | Hidden |
@@ -28,6 +28,7 @@ icon (power bolt and plug, battery state, or none).
 | Powering accessories | Power macOS allocated to USB devices | |
 | Chip temperature | Average of the CPU sensors | |
 | Fan speed | The faster fan; hidden on fanless Macs | |
+| Power graph | The last 60 seconds of power in or out, drawn in the capsule | |
 
 Colors: charger input blue, Mac use purple, charging green, draining pink, warnings amber.
 
@@ -85,6 +86,14 @@ the overall grade is the weakest check.
 
 The first 20 seconds after plugging in are a negotiation phase and are never judged.
 
+### Charger and cable test
+
+Cable resistance needs the current to change, which everyday use may not do. On the dashboard's
+Charger card, click **Test now**: Wattsup measures at rest for 5 seconds, loads every CPU core for
+10, lets it settle for 5, samples twice a second, and grades the result on the spot. It stops if
+you unplug, switch chargers, cancel, or the hottest core reaches 95 °C. A charger already at its
+limit cannot swing further, so the cable stays ungraded and the result says so.
+
 ## History
 
 The last hour is kept at full detail in memory. One averaged point per minute is saved to disk
@@ -101,6 +110,25 @@ so it gets its own entry, which also ranks your cables. Use the ⋯ menu, Same c
 those entries into one brick ranked on its best cable; Separate undoes it. Apple chargers report a
 serial number, so identical Apple bricks stay apart; third party chargers do not, so identical
 units of one model share an entry. Last seen shows the exact local time.
+
+**Which charger to pack.** Above the list, Wattsup takes what your Mac typically draws on a
+charger (the median minute) and when busy (the 95th percentile), then names the smallest charger
+in your library whose limit covers the busy figure, plus the fastest one. It needs an hour of
+history on a charger first.
+
+## Charging receipts
+
+Each time you charge for 2 minutes or more, Wattsup writes a receipt: the charger, start and end
+percent, watt hours added and drawn from the wall, average and peak watts, minutes to 80%, and the
+share of the time the charger was the bottleneck. Gaps of over a minute while Wattsup was not
+running are not counted. The dashboard lists recent receipts; Settings can also send one as a
+notification when you unplug (off by default).
+
+## Battery care
+
+From Wattsup's own 30 day history: hours plugged in above 95%, hours at 40 °C or hotter, how often
+the battery ran below 10%, and cycles per week, with plain advice. Weekly figures appear only once
+there is a full day of history, so a few hours are never stretched into a weekly habit.
 
 ## Powering accessories
 

@@ -133,12 +133,12 @@ public struct PowerSnapshot: Equatable, Sendable {
         return batteryVolts * batteryAmps
     }
 
-    /// Power the Mac itself uses. On battery the pack is the only source, so its own reading
-    /// keeps both legs of the flow equal; the controller's load figure is a smoothed average.
+    /// Power the Mac itself uses: what comes in minus what the pack measurably takes, so the flow
+    /// always balances. SystemLoad can disagree with the pack during fast charging, so it is a fallback.
     public var systemWatts: Double {
         if !isExternalPower { return max(0.0, -batteryWatts) + 0 }
-        if let systemLoadWatts, systemLoadWatts > 0 { return systemLoadWatts }
-        return max(0, (inputWatts ?? 0) - batteryWatts)
+        if let inputWatts, inputWatts > 0 { return max(0, inputWatts - batteryWatts) }
+        return max(0, systemLoadWatts ?? 0)
     }
 
     public var wallWatts: Double? {

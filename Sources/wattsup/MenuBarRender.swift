@@ -181,8 +181,16 @@ enum CardsRender {
                                     to: dir.appendingPathComponent("card-energy.png")) && ok
         ok = MarketingCapture.write(EnergyByAppCard(impact: m.impact), width: 620,
                                     to: dir.appendingPathComponent("card-apps.png")) && ok
-        ok = MarketingCapture.write(ChargerHistoryCard(chargers: m.chargers.sorted, current: s.adapter?.fingerprint, forget: { _ in }, showsForget: false),
+        ok = MarketingCapture.write(ChargerHistoryCard(chargers: m.chargers.sorted,
+                                                       advice: PackAdvice(samples: m.archive, bricks: Brick.group(m.chargers.records)),
+                                                       current: s.adapter?.fingerprint, forget: { _ in }, showsForget: false),
                                     width: 1040, to: dir.appendingPathComponent("card-chargers.png")) && ok
+        ok = MarketingCapture.write(BatteryCareCard(care: BatteryCare(samples: m.archive)), width: 520,
+                                    to: dir.appendingPathComponent("card-care.png")) && ok
+        if !m.sessions.isEmpty {
+            ok = MarketingCapture.write(ReceiptsCard(sessions: m.sessions, names: { m.chargers.name(for: $0) }), width: 520,
+                                        to: dir.appendingPathComponent("card-receipts.png")) && ok
+        }
         ok = MarketingCapture.write(Card(title: "History, last 24 hours", symbol: "chart.xyaxis.line") {
             SeriesChart(series: Series.power(day), unit: "W", height: 220, showsZero: true, strideMinutes: 180)
         }, width: 1040, to: dir.appendingPathComponent("card-history.png")) && ok

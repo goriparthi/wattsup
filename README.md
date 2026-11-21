@@ -12,14 +12,16 @@ Site: https://goriparthi.github.io/wattsup/
 
 ## What it shows
 
-- **Menu bar**: pick any of 16 readings and order them, on one line or two rows, colored by meaning
-  in an outlined capsule. Hover a number to see what it is.
+- **Menu bar**: pick any of 17 readings, including a live 60 second power graph, and order them, on
+  one line or two rows, colored by meaning in an outlined capsule. Hover a number to see what it is.
 - **Popover**: a battery tank that fills and drains, a hybrid car style power flow from charger to
   Mac to battery (and to any powered accessories), the charger verdict, and grouped details.
 - **Dashboard**: history charts, every USB-C Power Delivery profile, charger efficiency, battery
-  health, cycles and per cell voltages, energy mode, and every charger you have used.
+  health, cycles and per cell voltages, energy mode, charging receipts,
+  battery care, and a ranked charger library that says which charger to pack.
 - **Charger check**: tells you when the charger, or its cable, is the bottleneck and what size
-  would fix it, and grades its efficiency.
+  would fix it, and grades its efficiency. A 20 second test you start yourself measures the
+  cable on the spot.
 
 Readings come from the `AppleSmartBattery` IOKit entry, read locally without admin rights. They
 never leave the Mac: no account, no analytics. The only network request is a daily check of this

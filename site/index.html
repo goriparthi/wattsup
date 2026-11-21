@@ -149,6 +149,7 @@ figcaption{margin-top:14px;font-size:14px;color:var(--muted);line-height:1.5}
 .report-grid{margin:28px 0 0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--line);border-radius:12px;background:var(--elevated);overflow:hidden}
 .report-grid li{padding:22px 22px 24px}
 .report-grid li + li{border-left:1px solid var(--line)}
+.report-note{margin-top:28px;color:var(--muted);max-width:76ch}.report-note strong{color:var(--text)}
 .report-grid p{margin-top:6px;font-size:15px;line-height:1.55;color:var(--muted)}
 @media (max-width:1180px){
   .report-grid{grid-template-columns:repeat(2,1fr)}
@@ -230,10 +231,14 @@ figcaption{margin-top:14px;font-size:14px;color:var(--muted);line-height:1.5}
 /* The last tile in each column stretches, so all three columns end on one line */
 .collage-col > .tile:last-child{flex:1}
 .stats{display:flex;flex-direction:column;padding:20px 18px}
-.stats figcaption{padding:0}
+.tile.stats figcaption{padding:0;margin:0}
 .numbers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 16px;margin:18px 0 0;flex:1;align-content:center}
 .numbers dt{font:600 clamp(22px,2vw,28px)/1.1 ui-monospace,"SF Mono",Menlo,monospace;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .numbers dd{margin:4px 0 0;font-size:13px;color:var(--muted)}
+.stats.wide{display:block;padding:22px 24px}
+.stats.wide .numbers{grid-template-columns:repeat(6,minmax(0,1fr))}
+@media (max-width:1080px){.stats.wide .numbers{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:520px){.stats.wide .numbers{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:1080px){.collage{grid-template-columns:repeat(2,minmax(0,1fr))}
   .collage-col:nth-child(3){grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
   .collage-col:nth-child(3) > .tile:last-child{grid-column:1/-1}}
@@ -348,15 +353,47 @@ figcaption{margin-top:14px;font-size:14px;color:var(--muted);line-height:1.5}
     <div class="container">
       <div class="section-head">
         <h2 id="dashboard-title">Everything the battery controller knows, on one screen</h2>
-        <p>The dashboard opens from the menu bar and goes far past the system battery settings. Every card below is the real app, rendered from a live reading on a 16 inch MacBook Pro charging from a 45 W brick.</p>
+        <p>The dashboard opens from the menu bar and goes far past the system battery settings. Every card below is the real app, rendered from a live reading on a 16 inch MacBook Pro charging from a 100 W charger.</p>
       </div>
       <div class="collage">
         <div class="collage-col">
             <figure class="tile">
-              <img src="images/cards/card-charger.jpg" width="1036" height="1701" loading="lazy" alt="The Charger card: a 45 W USB-C charger negotiated at 20 V and 2.25 A, live input, load near its limit, efficiency rated Excellent, a report card, and the five power profiles it offers.">
-              <figcaption><span class="src">USB Power Delivery · AppleSmartBattery</span><strong>Charger and report card</strong><p>The profile it negotiated, live input, load against its limit, efficiency, and a report card graded only from measured samples.</p><ul class="specs"><li>PDO 20 V × 2.25 A</li><li>load %</li><li>sag under load</li><li>R<sub>cable</sub> from dV/dI</li><li>efficiency %</li></ul></figcaption>
+              <img src="images/cards/card-charger.jpg" width="1044" height="1667" loading="lazy" alt="The Charger card: a 100 W USB-C charger negotiated at 20 V and 5 A, live input, load near its limit, efficiency rated Excellent, a report card, and the five power profiles it offers.">
+              <figcaption><span class="src">USB Power Delivery · AppleSmartBattery</span><strong>Charger and report card</strong><p>The profile it negotiated, live input, load against its limit, efficiency, and a report card graded only from measured samples.</p><ul class="specs"><li>PDO 20 V × 5 A</li><li>load %</li><li>sag under load</li><li>R<sub>cable</sub> from dV/dI</li><li>efficiency %</li></ul></figcaption>
             </figure>
-            <figure class="tile stats" aria-label="By the numbers">
+            <figure class="tile">
+              <img src="images/cards/card-check.jpg" width="1044" height="242" loading="lazy" alt="The Charger check card: the charger is the bottleneck, running near its limit.">
+              <figcaption><span class="src">Derived</span><strong>Charger check</strong><p>Compares what the Mac would draw with what the charger can deliver, and names the cable when the profiles say so.</p><ul class="specs"><li>bottleneck</li><li>headroom</li><li>check the cable</li></ul></figcaption>
+            </figure>
+        </div>
+        <div class="collage-col">
+            <figure class="tile">
+              <img src="images/cards/card-battery.jpg" width="1044" height="1462" loading="lazy" alt="The Battery card: power, pack voltage and current, charge, health, capacity in watt hours, cycles, the charge the battery is requesting, its lifetime record, and three cells drawn as compartments of a pack.">
+              <figcaption><span class="src">AppleSmartBattery · LifetimeData</span><strong>Battery, down to the cell</strong><p>Charge in mAh and Wh, health against design, cycles, what the battery is asking the charger for, its lifetime record, and each cell as a compartment of the pack.</p><ul class="specs"><li>3S pack</li><li>about 99 Wh design</li><li>cell imbalance mV</li><li>peak 8.04 A</li><li>23,076 h</li></ul></figcaption>
+            </figure>
+            <figure class="tile">
+              <img src="images/cards/card-care.jpg" width="1044" height="362" loading="lazy" alt="The Battery care card: hours plugged in above 95%, hours at 40 °C or hotter, and how often the battery ran below 10%, from Wattsup's own history.">
+              <figcaption><span class="src">Your own history</span><strong>Battery care</strong><p>Hours spent full and plugged in, hours hot, and deep discharges, with plain advice. Weekly figures wait for a full day of history instead of guessing.</p><ul class="specs"><li>above 95%</li><li>40 °C or hotter</li><li>below 10%</li><li>cycles per week</li></ul></figcaption>
+            </figure>
+        </div>
+        <div class="collage-col">
+            <figure class="tile">
+              <img src="images/cards/card-thermals.jpg" width="1044" height="563" loading="lazy" alt="The Thermals card: left and right fans, CPU, hottest core, GPU and battery temperatures.">
+              <figcaption><span class="src">AppleSMC</span><strong>Thermals</strong><p>Fan speeds and chip temperatures read straight from the System Management Controller. Fans spin on screen when they spin in the Mac.</p><ul class="specs"><li>2 fans</li><li>79 chip sensors</li><li>hottest core</li></ul></figcaption>
+            </figure>
+            <figure class="tile">
+              <img src="images/cards/card-energy.jpg" width="1044" height="510" loading="lazy" alt="The Energy card: watt hours today from the wall, used by the Mac, and the last 30 days.">
+              <figcaption><span class="src">Stored minutes</span><strong>Energy</strong><p>Watt hours from the wall and used by the Mac, integrated from one averaged point per minute, with optional cost.</p><ul class="specs"><li>Wh per day</li><li>30 days</li><li>cost per kWh</li></ul></figcaption>
+            </figure>
+            <figure class="tile">
+              <img src="images/cards/card-apps.jpg" width="1244" height="466" loading="lazy" alt="The Energy use by app card: apps ranked by energy impact, each with its icon and a bar.">
+              <figcaption><span class="src">top -stats power</span><strong>Energy use by app</strong><p>The apps working the Mac hardest, helpers grouped under their app. It is Activity Monitor's energy impact score, labeled honestly as not watts.</p><ul class="specs"><li>energy impact</li><li>grouped by bundle</li></ul></figcaption>
+            </figure>
+        </div>
+      </div>
+      <div class="bento">
+        <div class="bento-wide">
+            <figure class="tile stats wide" aria-label="By the numbers">
               <figcaption><span class="src">By the numbers</span><strong>Read off one MacBook Pro</strong></figcaption>
               <dl class="numbers">
                 <div><dt>0.13 Ω</dt><dd>cable resistance, measured</dd></div>
@@ -364,44 +401,16 @@ figcaption{margin-top:14px;font-size:14px;color:var(--muted);line-height:1.5}
                 <div><dt>8.04 A</dt><dd>lifetime peak draw</dd></div>
                 <div><dt>79</dt><dd>chip temperature sensors</dd></div>
                 <div><dt>99 Wh</dt><dd>battery design capacity</dd></div>
-                <div><dt>16</dt><dd>menu bar readings</dd></div>
+                <div><dt>17</dt><dd>menu bar readings</dd></div>
               </dl>
             </figure>
-        </div>
-        <div class="collage-col">
             <figure class="tile">
-              <img src="images/cards/card-battery.jpg" width="1036" height="1302" loading="lazy" alt="The Battery card: power, pack voltage and current, charge, health, capacity in watt hours, cycles, the charge the battery is requesting, its lifetime record, and three cells drawn as compartments of a pack.">
-              <figcaption><span class="src">AppleSmartBattery · LifetimeData</span><strong>Battery, down to the cell</strong><p>Charge in mAh and Wh, health against design, cycles, what the battery is asking the charger for, its lifetime record, and each cell as a compartment of the pack.</p><ul class="specs"><li>3S pack</li><li>about 99 Wh design</li><li>cell imbalance mV</li><li>peak 8.04 A</li><li>23,076 h</li></ul></figcaption>
-            </figure>
-            <figure class="tile">
-              <img src="images/cards/card-check.jpg" width="1036" height="261" loading="lazy" alt="The Charger check card: the charger is the bottleneck, running near its limit.">
-              <figcaption><span class="src">Derived</span><strong>Charger check</strong><p>Compares what the Mac would draw with what the charger can deliver, and names the cable when the profiles say so.</p><ul class="specs"><li>bottleneck</li><li>headroom</li><li>check the cable</li></ul></figcaption>
-            </figure>
-        </div>
-        <div class="collage-col">
-            <figure class="tile">
-              <img src="images/cards/card-thermals.jpg" width="1036" height="555" loading="lazy" alt="The Thermals card: left and right fans, CPU, hottest core, GPU and battery temperatures.">
-              <figcaption><span class="src">AppleSMC</span><strong>Thermals</strong><p>Fan speeds and chip temperatures read straight from the System Management Controller. Fans spin on screen when they spin in the Mac.</p><ul class="specs"><li>2 fans</li><li>79 chip sensors</li><li>hottest core</li></ul></figcaption>
-            </figure>
-            <figure class="tile">
-              <img src="images/cards/card-energy.jpg" width="1036" height="262" loading="lazy" alt="The Energy card: watt hours today from the wall, used by the Mac, and the last 30 days.">
-              <figcaption><span class="src">Stored minutes</span><strong>Energy</strong><p>Watt hours from the wall and used by the Mac, integrated from one averaged point per minute, with optional cost.</p><ul class="specs"><li>Wh per day</li><li>30 days</li><li>cost per kWh</li></ul></figcaption>
-            </figure>
-            <figure class="tile">
-              <img src="images/cards/card-apps.jpg" width="1236" height="458" loading="lazy" alt="The Energy use by app card: apps ranked by energy impact, each with its icon and a bar.">
-              <figcaption><span class="src">top -stats power</span><strong>Energy use by app</strong><p>The apps working the Mac hardest, helpers grouped under their app. It is Activity Monitor's energy impact score, labeled honestly as not watts.</p><ul class="specs"><li>energy impact</li><li>grouped by bundle</li></ul></figcaption>
-            </figure>
-        </div>
-      </div>
-      <div class="bento">
-        <div class="bento-wide">
-            <figure class="tile">
-              <img src="images/cards/card-history.jpg" width="2076" height="550" loading="lazy" alt="The History card: 24 hours of charger, Mac and battery power, with a gap where Wattsup was not running.">
+              <img src="images/cards/card-history.jpg" width="2084" height="558" loading="lazy" alt="The History card: 24 hours of charger, Mac and battery power, with a gap where Wattsup was not running.">
               <figcaption><span class="src">Archive · 1 point per minute</span><strong>History that survives restarts</strong><p>Charger, Mac and battery power over 24 hours or 7 days. Time Wattsup was not running stays empty instead of being smoothed over.</p><ul class="specs"><li>5 min to 7 d</li><li>30 day archive</li><li>gaps shown, not invented</li></ul></figcaption>
             </figure>
             <figure class="tile">
-              <img src="images/cards/card-chargers.jpg" width="2076" height="333" loading="lazy" alt="The Chargers you have used card: four chargers with their limits, peak load, quality, efficiency and verdict.">
-              <figcaption><span class="src">Per charger</span><strong>Every charger you have used</strong><p>Peak load, report card grade, measured cable resistance and average efficiency for each brick, so you know which one to pack.</p><ul class="specs"><li>peak load</li><li>quality grade</li><li>R<sub>cable</sub> in Ω</li><li>avg efficiency</li></ul></figcaption>
+              <img src="images/cards/card-chargers.jpg" width="2084" height="641" loading="lazy" alt="The Charger library card: a suggestion to pack the 70 W charger, then four chargers ranked by score with limit, peak load, quality, efficiency, time used and the exact time each was last seen.">
+              <figcaption><span class="src">Charger library · stored on your Mac</span><strong>Every charger you own, ranked</strong><p>Each charger is recognized when you plug it back in, by its serial number when it reports one. Name them, merge one brick seen on two cables, and see exactly when each was last used. From your own usage, Wattsup names the smallest charger worth packing.</p><ul class="specs"><li>score: power 40%, efficiency 30%, quality 30%</li><li>your names</li><li>which charger to pack</li><li>last seen to the minute</li></ul></figcaption>
             </figure>
         </div>
       </div>
@@ -466,6 +475,7 @@ figcaption{margin-top:14px;font-size:14px;color:var(--muted);line-height:1.5}
           <li><h3>Connection</h3><p>Drop outs: brief disconnects while plugged in, often a worn cable or loose port.</p></li>
           <li><h3>Heat</h3><p>Whether macOS slowed charging because of heat.</p></li>
         </ul>
+        <p class="report-note"><strong>Test it on the spot.</strong> Cable resistance needs the current to change. Click Test now on the Charger card and Wattsup loads the CPU for 10 of 20 seconds, samples twice a second, and grades the cable and charger right away. It stops if you unplug, switch chargers or the chip gets hot.</p>
       </div>
     </div>
   </section>
@@ -475,7 +485,7 @@ figcaption{margin-top:14px;font-size:14px;color:var(--muted);line-height:1.5}
       <div class="prose">
         <h2 id="menubar-title">A readout that fits how you work</h2>
         <p>The menu bar shows live numbers in an outlined capsule, colored by meaning: charger input blue, Mac use purple, charging green, draining pink. Hover any number for a tooltip that names it.</p>
-        <p>Choose from 16 readings, including power in or out, voltage, current, Mac uses, battery power, from the wall, charger loss, charger load, battery percent, time, temperature and health. Reorder them, stack them on two rows, or turn color and outline off.</p>
+        <p>Choose from 17 readings, including power in or out, voltage, current, Mac uses, battery power, from the wall, charger loss, charger load, battery percent, time, temperature, health and a live graph of the last minute of power. Reorder them, stack them on two rows, or turn color and outline off.</p>
         <figure class="capsules">
           <div class="capsule dark"><img src="images/menubar-dark.png" width="428" height="60" loading="lazy" alt="Menu bar readout in dark mode: 38.1 W from the wall, 37% charger load, 29.9 W Mac uses, 100% battery."></div>
           <div class="capsule light"><img src="images/menubar-light.png" width="428" height="60" loading="lazy" alt="The same readout in light mode."></div>
@@ -532,8 +542,8 @@ figcaption{margin-top:14px;font-size:14px;color:var(--muted);line-height:1.5}
         </li>
         <li>
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h12M4 10h12M4 16h8"/></svg>
-          <h3>Chargers you've used</h3>
-          <p>Every charger you plug in is remembered with its limit, peak load, quality grade and average efficiency.</p>
+          <h3>Charger library</h3>
+          <p>Every charger you plug in is recognized, ranked and nameable, with its limit, peak load, quality, efficiency and when you last used it.</p>
         </li>
         <li>
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v3M10 14v3M3 10h3M14 10h3"/><circle cx="10" cy="10" r="4"/></svg>
@@ -544,6 +554,21 @@ figcaption{margin-top:14px;font-size:14px;color:var(--muted);line-height:1.5}
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="3.5" width="15" height="4" rx="1"/><path d="M5 11h10M5 14.5h6"/></svg>
           <h3>Replaces the battery icon</h3>
           <p>Settings links straight to the macOS Menu Bar settings, so you can hide the built in battery icon.</p>
+        </li>
+        <li>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 2.5h10v15l-2-1.5-1.5 1.5-1.5-1.5-1.5 1.5L7 16l-2 1.5v-15Z"/><path d="M8 7h4M8 10h4"/></svg>
+          <h3>Charging receipts</h3>
+          <p>One receipt per charge: the charger, start and end percent, watt hours added, average and peak watts, time to 80%, and how long the charger held it back.</p>
+        </li>
+        <li>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 16.5s-6-3.6-6-8A3.3 3.3 0 0 1 10 6a3.3 3.3 0 0 1 6 2.5c0 4.4-6 8-6 8Z"/></svg>
+          <h3>Battery care</h3>
+          <p>How long the battery sat full on the charger, ran hot or dropped below 10%, from your own history, with advice in plain words.</p>
+        </li>
+        <li>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 10h3l2-4.5 3 9 2-4.5h5"/></svg>
+          <h3>Charger and cable test</h3>
+          <p>A 20 second test you start yourself. It swings the current to measure cable resistance and voltage sag on the spot.</p>
         </li>
       </ul>
     </div>
@@ -637,6 +662,18 @@ figcaption{margin-top:14px;font-size:14px;color:var(--muted);line-height:1.5}
         <details>
           <summary>Are the accessory numbers live?</summary>
           <p>No. macOS reports the power it allocated to each USB device, so these are ceilings. Whatever a device actually draws is already part of Mac uses.</p>
+        </details>
+        <details>
+          <summary>How does Wattsup recognize a charger I used before?</summary>
+          <p>Apple chargers report a serial number, so Wattsup knows that exact brick. Other chargers are matched by name, maker, rating and the power profiles they offer. A charger on a different cable can negotiate different profiles and show up separately; Same charger as, in the library, merges them.</p>
+        </details>
+        <details>
+          <summary>How does it pick which charger to pack?</summary>
+          <p>From your own minutes on a charger: it takes what your Mac typically draws and what it draws when busy, then suggests the smallest charger in your library that covers the busy figure, plus the fastest one. It waits for at least an hour of history first.</p>
+        </details>
+        <details>
+          <summary>Is the charger test safe?</summary>
+          <p>It loads the CPU for 10 seconds, about what a video export does. It stops if you unplug, switch chargers or the chip reaches 95 °C. If the charger is already at its limit the current cannot swing, so the cable stays ungraded and Wattsup says why.</p>
         </details>
       </div>
     </div>
