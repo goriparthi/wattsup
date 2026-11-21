@@ -8,15 +8,18 @@ command -v yara >/dev/null || die "yara not installed (brew install yara); refus
 [[ -f "$RULES" ]] || die "XProtect rules not found at $RULES"
 TARGETS=("$@")
 [[ ${#TARGETS[@]} -gt 0 ]] || TARGETS=("$APP_BUNDLE")
-found=0
+for t in "${TARGETS[@]}"; do [[ -e "$t" ]] || die "nothing to scan at $t"; done
+found=0 scanned=0
 while IFS= read -r -d '' bin; do
     if file -b "$bin" | grep -q "Mach-O"; then
-        hits="$(yara -w "$RULES" "$bin" 2>/dev/null || true)"
+        hits="$(yara -w "$RULES" "$bin")" || die "yara failed on $bin"
+        scanned=$((scanned + 1))
         if [[ -n "$hits" ]]; then
             warn "XProtect rule matched: $hits"
             found=1
         fi
     fi
 done < <(find "${TARGETS[@]}" -type f -perm -u+x -print0)
+(( scanned > 0 )) || die "no Mach-O binaries found to scan in ${TARGETS[*]}"
 (( found == 0 )) || die "a binary matches an XProtect rule; change the code layout and rebuild before shipping"
-info "XProtect scan clean ($(yara --version 2>/dev/null | head -1), rules $(defaults read /Library/Apple/System/Library/CoreServices/XProtect.bundle/Contents/Info.plist CFBundleShortVersionString 2>/dev/null))"
+info "XProtect scan clean, $scanned binaries ($(yara --version 2>/dev/null | head -1), rules $(defaults read /Library/Apple/System/Library/CoreServices/XProtect.bundle/Contents/Info.plist CFBundleShortVersionString 2>/dev/null))"

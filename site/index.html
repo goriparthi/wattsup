@@ -88,6 +88,9 @@ figcaption{margin-top:14px;font-size:14px;color:var(--muted);line-height:1.5}
 .hero::before{content:"";position:absolute;inset:-10% 0 auto;height:720px;z-index:-1;pointer-events:none;
   background:radial-gradient(ellipse 60% 55% at 50% 0%,rgba(197,184,255,.10),transparent 70%)}
 .hero-copy{max-width:760px;margin:0 auto}
+.whatsnew{display:inline-flex;align-items:center;gap:10px;margin:0 0 18px;padding:6px 14px 6px 6px;border:1px solid var(--line-strong);border-radius:999px;font-size:14px;color:var(--muted);text-decoration:none;max-width:100%}
+.whatsnew span{flex:none;padding:3px 10px;border-radius:999px;background:var(--iris);color:var(--on-iris);font-weight:600;font-size:12px}
+.whatsnew:hover{color:var(--text);border-color:var(--iris)}
 .hero .lede{text-wrap:pretty;margin:24px auto 0;max-width:620px;font-size:clamp(18px,1.6vw,20px);color:var(--muted);line-height:1.6}
 .hero .actions{justify-content:center;margin-top:36px}
 .hero .note{margin-top:20px;font-size:14px;color:var(--muted)}
@@ -300,6 +303,7 @@ figcaption{margin-top:14px;font-size:14px;color:var(--muted);line-height:1.5}
     <div class="container">
       <div class="hero-copy">
         <img class="hero-icon" src="app-icon-dark.svg" width="96" height="96" alt="" aria-hidden="true">
+        <a class="whatsnew" href="https://github.com/goriparthi/wattsup/releases/latest"><span>New in 0.0.7</span> Charger and cable test, charging receipts, which charger to pack</a>
         <p class="tagline">Charging demystified.</p>
         <h1 id="hero-title">Live power telemetry for your Mac</h1>
         <p class="lede">Wattsup shows what your charger delivers, what your Mac uses and what your battery stores, right in the menu bar, and tells you when the charger or cable is holding you back.</p>
