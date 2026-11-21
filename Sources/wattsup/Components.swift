@@ -310,9 +310,9 @@ struct CellPack: View {
                 // Terminal on the right, like a pack lying on its side
                 RoundedRectangle(cornerRadius: 2, style: .continuous)
                     .fill(style.secondary.opacity(0.6))
-                    .frame(width: 5, height: 22)
+                    .frame(width: 6, height: 34)
             }
-            .frame(height: 64)
+            .frame(height: 104)
             HStack(spacing: 4) {
                 ForEach(Array(cells.enumerated()), id: \.offset) { i, v in
                     VStack(spacing: 1) {

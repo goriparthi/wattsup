@@ -96,7 +96,7 @@ struct PowerFlowView: View {
                         watts: abs(b), tint: batteryTint, label: Units.watts(abs(b))))
         if let a = l.accessories {
             // Starts under the Mac's labels so the pipe never runs through the text
-            let start = CGPoint(x: l.mac.x, y: l.mac.y + l.radius + (l.large ? 70 : 50))
+            let start = CGPoint(x: l.mac.x, y: l.mac.y + l.radius + (l.large ? 86 : 50))
             out.append(Link(from: start, to: l.edge(a, toward: l.mac),
                             watts: s.peripherals.allocatedWatts, tint: Theme.system,
                             label: "≤ " + Units.watts(s.peripherals.allocatedWatts, digits: 0)))
@@ -113,7 +113,7 @@ struct PowerFlowView: View {
                        style: StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [3, 5]))
             return
         }
-        let width = (large ? 3 : 2.5) + min(large ? 5 : 3.5, link.watts / (large ? 14 : 20))
+        let width = (large ? 4 : 2.5) + min(large ? 7 : 3.5, link.watts / (large ? 12 : 20))
         ctx.stroke(path, with: .color(link.tint.opacity(0.28)), style: StrokeStyle(lineWidth: width, lineCap: .round))
 
         let dx = link.to.x - link.from.x, dy = link.to.y - link.from.y
@@ -156,26 +156,26 @@ struct PowerFlowView: View {
         let accessories: CGPoint?
 
         static func height(large: Bool, accessories: Bool) -> CGFloat {
-            (large ? 190 : 128) + (accessories ? (large ? 160 : 118) : 0)
+            (large ? 262 : 128) + (accessories ? (large ? 200 : 118) : 0)
         }
 
         init(size: CGSize, large: Bool, accessories: Bool) {
             self.size = size
             self.large = large
-            radius = large ? 30 : 20
-            let y: CGFloat = large ? 70 : 46
+            radius = large ? 42 : 20
+            let y: CGFloat = large ? 96 : 46
             let inset = large ? size.width * 0.14 : size.width * 0.15
             charger = CGPoint(x: inset, y: y)
             mac = CGPoint(x: size.width / 2, y: y)
             battery = CGPoint(x: size.width - inset, y: y)
             // Room below the accessory node for its circle and two or three label lines
-            self.accessories = accessories ? CGPoint(x: size.width / 2, y: size.height - (large ? 100 : 66)) : nil
+            self.accessories = accessories ? CGPoint(x: size.width / 2, y: size.height - (large ? 124 : 66)) : nil
         }
 
         func edge(_ a: CGPoint, toward b: CGPoint) -> CGPoint {
             let dx = b.x - a.x, dy = b.y - a.y
             let d = max(1, hypot(dx, dy))
-            let gap = radius + (large ? 6 : 4)
+            let gap = radius + (large ? 8 : 4)
             return CGPoint(x: a.x + dx / d * gap, y: a.y + dy / d * gap)
         }
     }
@@ -193,10 +193,10 @@ private struct FlowNodeBadge: View {
 
     var body: some View {
         let r = layout.radius
-        VStack(spacing: layout.large ? 5 : 3) {
+        VStack(spacing: layout.large ? 6 : 3) {
             ZStack {
                 // The ring, when present, takes the outer band so every node keeps the same footprint
-                let ringWidth: CGFloat = layout.large ? 4 : 3
+                let ringWidth: CGFloat = layout.large ? 5 : 3
                 let inset: CGFloat = ring == nil ? 0 : ringWidth + 3
                 Group {
                     Circle().fill(Theme.surface)
@@ -217,19 +217,19 @@ private struct FlowNodeBadge: View {
             }
             .frame(width: r * 2, height: r * 2)
             Text(value)
-                .font((layout.large ? Font.title3 : .callout).weight(.semibold))
+                .font((layout.large ? Font.title2 : .callout).weight(.semibold))
                 .monospacedDigit()
                 .contentTransition(.numericText())
                 .animation(.smooth(duration: 0.6), value: value)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-            Text(title).font(.caption).foregroundStyle(Theme.secondaryText).lineLimit(1)
+            Text(title).font(layout.large ? .callout : .caption).foregroundStyle(Theme.secondaryText).lineLimit(1)
             if layout.large, let detail {
-                Text(detail).font(.caption2.monospacedDigit()).foregroundStyle(Theme.secondaryText)
+                Text(detail).font(.caption.monospacedDigit()).foregroundStyle(Theme.secondaryText)
             }
         }
-        .frame(width: layout.large ? 150 : 104)
-        .offset(y: (layout.large ? 34 : 24))
+        .frame(width: layout.large ? 190 : 104)
+        .offset(y: (layout.large ? 42 : 24))
     }
 }
 
@@ -240,7 +240,7 @@ private struct WattBadge: View {
 
     var body: some View {
         Text(text)
-            .font((large ? Font.caption : .caption2).weight(.medium).monospacedDigit())
+            .font((large ? Font.callout : .caption2).weight(.medium).monospacedDigit())
             .contentTransition(.numericText())
             .animation(.smooth(duration: 0.6), value: text)
             .foregroundStyle(Theme.secondaryText)
